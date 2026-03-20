@@ -1,0 +1,4 @@
+{
+  "title": "Job: Corrigir symlink e testar envio para Telegram",
+  "job": "Job: Corrigir symlink e testar envio para Telegram\n\n1. **Remover symlink incorreto**:\n   - `rm skills/active/weather-forecast`\n\n2. **Criar symlink correto com caminho relativo**:\n   - `cd skills/active && ln -s ../weather-forecast weather-forecast`\n\n3. **Testar execução do script**:\n   - Executar `skills/active/weather-forecast/forecast.sh`\n   - Verificar se a mensagem chega no Telegram\n\n4. **Se falhar**, capturar erro e reportar"
+}
