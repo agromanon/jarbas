@@ -1,0 +1,4 @@
+{
+  "title": "Test GLM API Connection with New Secrets",
+  "job": "Test that the GLM API connection is working correctly with the newly configured secrets and variables.\n\nTasks:\n1. Verify the environment is correctly configured for GLM custom provider\n2. Create a brief test file at `logs/glm-connection-test.md` confirming the connection works\n3. If there are any errors, document them clearly\n\nContext: User has freshly configured:\n- Variables: LLM_PROVIDER=custom, LLM_MODEL=glm-5, OPENAI_BASE_URL=https://api.z.ai/api/coding/paas/v4\n- Secret: AGENT_LLM_CUSTOM_API_KEY (z.ai API key), AGENT_GH_TOKEN (GitHub PAT)\n\nThis is a connection verification test."
+}
