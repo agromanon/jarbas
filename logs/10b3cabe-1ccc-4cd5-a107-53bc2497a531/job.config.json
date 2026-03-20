@@ -1,4 +1,0 @@
-{
-  "title": "Test that the GLM API connection is working correctly with",
-  "job": "Test that the GLM API connection is working correctly with the updated configuration.\n\nTasks:\n1. Read the environment variables passed to the container to verify LLM_PROVIDER, LLM_MODEL, and OPENAI_BASE_URL are set correctly\n2. Attempt a simple API call to verify the GLM endpoint is accessible\n3. Create a brief test file at `logs/glm-connection-test.md` documenting:\n   - What environment variables are set (masking sensitive values)\n   - Whether the API connection test succeeded\n   - Any errors encountered\n\nContext: User is configuring z.ai GLM Coding Plan with:\n- LLM_PROVIDER=custom\n- LLM_MODEL=glm-5\n- OPENAI_BASE_URL=https://api.z.ai/api/coding/paas/v4\n- API key via AGENT_CUSTOM_API_KEY secret\n\nThis is a verification test to confirm the setup is working."
-}
