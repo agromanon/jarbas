@@ -47,14 +47,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Debug - Test GLM API
-        run: |
-          echo "Testing GLM API..."
-          curl -X POST "${{ secrets.AGENT_OPENAI_BASE_URL }}/chat/completions" \
-            -H "Authorization: Bearer ${{ secrets.AGENT_OPENAI_API_KEY }}" \
-            -H "Content-Type: application/json" \
-            -d '{"model": "glm-5", "max_tokens": 10, "messages": [{"role": "user", "content": "hi"}]}'
-
       - name: Run thepopebot Agent
         env:
           ALL_SECRETS: ${{ toJson(secrets) }}
@@ -92,9 +84,6 @@ jobs:
             -e LLM_SECRETS \
             -e LLM_MODEL="${LLM_MODEL}" \
             -e LLM_PROVIDER="${LLM_PROVIDER}" \
-            -e OPENAI_BASE_URL="${{ secrets.AGENT_OPENAI_BASE_URL }}" \
-            -e OPENAI_API_KEY="${{ secrets.AGENT_OPENAI_API_KEY }}" \
-            -e ANTHROPIC_API_KEY="${{ secrets.AGENT_ANTHROPIC_API_KEY }}" \
-            -e ANTHROPIC_BASE_URL="${{ secrets.AGENT_ANTHROPIC_BASE_URL }}" \
+            -e OPENAI_BASE_URL="${OPENAI_BASE_URL}" \
             -e AGENT_BACKEND="${AGENT_BACKEND}" \
             "$IMAGE"

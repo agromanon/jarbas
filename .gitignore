@@ -1,12 +1,11 @@
 # Credentials - NEVER commit these
-
 .env
 .env.local
 *.pem
 *.key
 
+# Claude Code
 .claude/*
-!.claude/skills
 
 # Pi system prompt (generated at runtime from SOUL.md)
 .pi/SYSTEM.md
@@ -14,13 +13,14 @@
 # Skills dependencies (installed at runtime in Docker for correct arch)
 skills/*/node_modules/
 
+# Database
+data/
+
 # Node
 node_modules/
 
 # Next.js
 .next/
-.next-new/
-.next-old/
 out/
 
 # OS files
@@ -41,8 +41,5 @@ tmp/
 temp/
 .tmp/
 
-# Data (SQLite memory, etc.)
-data/
-
-# Backups (created by init before overwriting managed files)
+# Backups from thepopebot upgrades
 .backups/
