@@ -1,0 +1,4 @@
+{
+  "title": "API GLM Connection Debug Test - Create Log File",
+  "job": "Job de teste com debug para verificar a conexão com a API GLM.\n\n**Tarefa:** Criar um arquivo em `logs/test-debug.md` contendo:\n- \"Debug test executado!\"\n- Data e hora atual"
+}
