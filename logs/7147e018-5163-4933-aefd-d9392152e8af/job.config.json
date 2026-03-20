@@ -1,4 +1,0 @@
-{
-  "title": "Test GLM API Connection and Notification System",
-  "job": "Test that the GLM API connection and notification system are both working correctly.\n\nTasks:\n1. Verify the GLM-4.7 API connection is still working\n2. Create a brief success report at `logs/notification-test.md`\n3. The notification workflow should trigger after this job completes, sending a notification to the event handler\n\nContext: User has added APP_URL and GH_WEBHOOK_SECRET to enable job completion notifications."
-}
