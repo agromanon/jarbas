@@ -1,4 +1,0 @@
-{
-  "title": "Debug Telegram API Integration",
-  "job": "Test Telegram notification by directly calling the Telegram API.\n\nTasks:\n1. Read the event handler code to find how it sends Telegram notifications\n2. Look for the Telegram API call pattern it uses\n3. Document in `logs/telegram-debug.md`:\n   - What variables are needed (TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID)\n   - The exact API endpoint and payload format used\n   - Any error handling that might be hiding failures\n4. Suggest why notifications might be failing despite \"notified\":true response\n\nContext: User has correct TELEGRAM_CHAT_ID in .env, bot works for chat, but job completion notifications don't arrive. The event handler returns {\"ok\":true,\"notified\":true} but no Telegram message arrives."
-}
