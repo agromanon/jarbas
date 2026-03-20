@@ -1,4 +1,0 @@
-{
-  "title": "Test GLM API Connection with thepopebot Beta Version",
-  "job": "Test that the GLM API connection is working correctly with the beta version of thepopebot.\n\nTasks:\n1. Verify the environment variables are correctly set (LLM_PROVIDER=custom, LLM_MODEL=glm-5, OPENAI_BASE_URL pointing to z.ai coding endpoint)\n2. Make a simple test to confirm the Pi agent can connect to GLM\n3. Create a brief report at `logs/glm-connection-test.md` documenting success or any errors\n\nContext: User has upgraded to thepopebot beta version to try to fix the LLM connection issue with GLM Coding Plan."
-}
