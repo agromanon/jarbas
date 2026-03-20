@@ -1,0 +1,4 @@
+{
+  "title": "Test Docker GLM Agent Pipeline with Log File Creation",
+  "job": "Job de teste simples para verificar se o Docker agent está funcionando com a configuração do GLM.\n\n**Tarefa:** Criar um arquivo em `logs/test-success.md` contendo:\n- \"Job executado com sucesso!\"\n- Data e hora atual\n- Uma frase aleatória sobre inteligência artificial\n\nEste é um teste mínimo para confirmar que o pipeline está operacional com o GLM-5."
+}
