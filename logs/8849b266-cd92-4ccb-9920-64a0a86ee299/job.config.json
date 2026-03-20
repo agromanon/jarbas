@@ -1,4 +1,0 @@
-{
-  "title": "Test GLM API Connection with Updated Configuration",
-  "job": "Test that the GLM API connection is working correctly with the updated configuration.\n\nTasks:\n1. Verify the environment variables are correctly set (LLM_PROVIDER=custom, LLM_MODEL=glm-5, OPENAI_BASE_URL pointing to z.ai coding endpoint)\n2. Make a simple test API call to confirm connectivity\n3. Create a brief report at `logs/glm-connection-test.md` documenting success or any errors\n\nContext: User has now set OPENAI_API_KEY secret and should have all required configuration for GLM Coding Plan."
-}
