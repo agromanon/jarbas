@@ -72,20 +72,5 @@ jobs:
             [to_entries[] | select(.key | startswith("AGENT_")) | select(.key | startswith("AGENT_LLM_") | not)]
             | map({key: (.key | sub("^AGENT_"; "")), value: .value}) | from_entries')
 
-          # Build LLM_SECRETS JSON from AGENT_LLM_* secrets
-          export LLM_SECRETS=$(echo "$ALL_SECRETS" | jq -c '
-            [to_entries[] | select(.key | startswith("AGENT_LLM_"))]
-            | map({key: (.key | sub("^AGENT_LLM_"; "")), value: .value}) | from_entries')
+          # Build LLM_SECRETS JSON from AGENT_L
 
-          docker run --rm \
-            -e REPO_URL="${{ github.server_url }}/${{ github.repository }}.git" \
-            -e BRANCH="${{ github.ref_name }}" \
-            -e SECRETS \
-            -e LLM_SECRETS \
-            -e LLM_MODEL="${LLM_MODEL}" \
-            -e LLM_PROVIDER="${LLM_PROVIDER}" \
-            -e OPENAI_BASE_URL="${OPENAI_BASE_URL}" \
-            -e AGENT_BACKEND="${AGENT_BACKEND}" \
-            -e ANTHROPIC_API_KEY="${{ secrets.AGENT_ANTHROPIC_API_KEY }}" \
-            -e ANTHROPIC_BASE_URL="${{ secrets.AGENT_ANTHROPIC_BASE_URL }}" \
-            "$IMAGE"
