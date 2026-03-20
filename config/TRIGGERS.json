@@ -1,5 +1,13 @@
 [
   {
+    "name": "job-complete-telegram",
+    "watch_path": "/webhook/job-complete",
+    "actions": [
+      { "type": "command", "command": "node send-telegram-notification.js '{{body}}'" }
+    ],
+    "enabled": true
+  },
+  {
     "name": "on-github-event",
     "watch_path": "/github/webhook",
     "actions": [
