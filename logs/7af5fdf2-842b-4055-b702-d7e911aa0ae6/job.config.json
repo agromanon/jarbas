@@ -1,0 +1,4 @@
+{
+  "title": "Teste Docker Agent - Criar Arquivo de Verificação",
+  "job": "Job de teste simples para verificar se o Docker agent está funcionando após configuração das secrets.\n\n**Tarefa:** Criar um arquivo em `logs/test-success.md` contendo apenas:\n- \"Job executado com sucesso!\"\n- Data e hora atual\n- Uma frase aleatória sobre robôs\n\nEste é um teste mínimo para confirmar que o pipeline está operacional."
+}
