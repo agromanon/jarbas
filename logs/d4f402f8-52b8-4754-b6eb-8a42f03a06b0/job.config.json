@@ -1,4 +1,0 @@
-{
-  "title": "Test that the GLM API connection is working correctly with",
-  "job": "Test that the GLM API connection is working correctly with the glm-4.7 model.\n\nTasks:\n1. Verify the environment is correctly configured for GLM custom provider with glm-4.7\n2. Make a simple test API call to confirm connectivity\n3. Create a brief report at `logs/glm-4.7-connection-test.md` confirming the connection works with the new model\n\nContext: User has switched LLM_MODEL from glm-5 to glm-4.7 and wants to verify it works."
-}
