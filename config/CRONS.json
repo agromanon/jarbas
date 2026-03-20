@@ -52,5 +52,19 @@
     "llm_provider": "openai",
     "llm_model": "gpt-4o",
     "enabled": false
+  },
+  {
+    "name": "weather-morning",
+    "schedule": "0 6 * * *",
+    "type": "command",
+    "command": "skills/weather-forecast/forecast.sh",
+    "enabled": true
+  },
+  {
+    "name": "weather-lunch",
+    "schedule": "0 12 * * *",
+    "type": "command",
+    "command": "skills/weather-forecast/forecast.sh",
+    "enabled": true
   }
 ]
