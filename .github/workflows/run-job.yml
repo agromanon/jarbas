@@ -94,5 +94,7 @@ jobs:
             -e LLM_PROVIDER="${LLM_PROVIDER}" \
             -e OPENAI_BASE_URL="${{ secrets.AGENT_OPENAI_BASE_URL }}" \
             -e OPENAI_API_KEY="${{ secrets.AGENT_OPENAI_API_KEY }}" \
+            -e ANTHROPIC_API_KEY="${{ secrets.AGENT_ANTHROPIC_API_KEY }}" \
+            -e ANTHROPIC_BASE_URL="${{ secrets.AGENT_ANTHROPIC_BASE_URL }}" \
             -e AGENT_BACKEND="${AGENT_BACKEND}" \
             "$IMAGE"
