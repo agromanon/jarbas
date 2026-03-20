@@ -1,0 +1,4 @@
+{
+  "title": "Debug Webhook Trigger Authentication Redirect Issue",
+  "job": "Investigate why the webhook trigger at /webhook/job-complete is redirecting to /login instead of processing the request.\n\nTasks:\n1. Check the middleware.js to understand authentication flow\n2. Check if webhook triggers should bypass authentication\n3. Look at how other triggers handle unauthenticated requests\n4. Identify if there's a specific header or configuration needed for webhook triggers\n5. Document findings in `logs/trigger-auth-debug.md`\n\nContext: User created a trigger at /webhook/job-complete but curl requests redirect to /login. Need to understand if triggers require authentication or if there's a middleware issue."
+}
