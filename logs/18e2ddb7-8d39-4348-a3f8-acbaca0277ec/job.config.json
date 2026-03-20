@@ -1,4 +1,0 @@
-{
-  "title": "Debugging Telegram notification failure",
-  "job": "Debug why Telegram notifications aren't being sent when jobs complete.\n\nTasks:\n1. Check the event handler code to understand how job completion notifications are sent to Telegram\n2. Look for any environment variables or configuration related to Telegram notifications\n3. Check if there's a TELEGRAM_CHAT_ID configured\n4. Document findings in `logs/telegram-notification-debug.md` with:\n   - What's required for Telegram notifications to work\n   - What might be missing\n   - How to fix it\n\nContext: User has Telegram chat working (bot responds to messages), but job completion notifications aren't being sent to Telegram. Need to identify the gap."
-}
