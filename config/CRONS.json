@@ -68,17 +68,52 @@
     "enabled": true
   },
   {
-    "name": "weather-bot-morning",
+    "name": "weather-06h",
     "schedule": "0 6 * * *",
     "type": "command",
-    "command": "skills/weather-bot/send-daily.sh",
+    "command": "skills/weather-bot/send-scheduled.sh 6",
     "enabled": true
   },
   {
-    "name": "weather-bot-lunch",
+    "name": "weather-08h",
+    "schedule": "0 8 * * *",
+    "type": "command",
+    "command": "skills/weather-bot/send-scheduled.sh 8",
+    "enabled": true
+  },
+  {
+    "name": "weather-10h",
+    "schedule": "0 10 * * *",
+    "type": "command",
+    "command": "skills/weather-bot/send-scheduled.sh 10",
+    "enabled": true
+  },
+  {
+    "name": "weather-12h",
     "schedule": "0 12 * * *",
     "type": "command",
-    "command": "skills/weather-bot/send-daily.sh",
+    "command": "skills/weather-bot/send-scheduled.sh 12",
+    "enabled": true
+  },
+  {
+    "name": "weather-14h",
+    "schedule": "0 14 * * *",
+    "type": "command",
+    "command": "skills/weather-bot/send-scheduled.sh 14",
+    "enabled": true
+  },
+  {
+    "name": "weather-16h",
+    "schedule": "0 16 * * *",
+    "type": "command",
+    "command": "skills/weather-bot/send-scheduled.sh 16",
+    "enabled": true
+  },
+  {
+    "name": "weather-18h",
+    "schedule": "0 18 * * *",
+    "type": "command",
+    "command": "skills/weather-bot/send-scheduled.sh 18",
     "enabled": true
   }
 ]
