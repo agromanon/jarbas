@@ -33,6 +33,16 @@ const USER_PREFERENCES_FILE = path.join(DATA_DIR, 'user-preferences.json');
 const WEATHER_BOT_TOKEN = process.env.WEATHER_BOT_TOKEN;
 const WEATHER_BOT_ADMIN_ID = parseInt(process.env.WEATHER_BOT_ADMIN_ID || '0');
 
+/**
+ * Ensure data directory exists
+ */
+function ensureDataDir() {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    console.log('✓ Data directory created');
+  }
+}
+
 // Default location
 const DEFAULT_LOCATION = {
   lat: -23.55,
@@ -44,6 +54,9 @@ const DEFAULT_LOCATION = {
  * Main handler function
  */
 async function handleWeatherBot() {
+  // Ensure data directory exists
+  ensureDataDir();
+
   if (!WEATHER_BOT_TOKEN) {
     console.error('ERROR: WEATHER_BOT_TOKEN environment variable is not set');
     process.exit(1);
@@ -205,7 +218,7 @@ async function handleCallbackQuery(callbackQuery) {
 async function handleStart(chatId) {
   const userId = chatId; // Assume chatId is userId for now
 
-  const welcomeMessage = `🌤️ *Bem-vindo ao Perninhasclimabot!*
+  let welcomeMessage = `🌤️ *Bem-vindo ao Perninhasclimabot!*
 
 Sou seu assistente de previsão do tempo.
 
@@ -758,6 +771,8 @@ function getUserPreferences(userId) {
     return json[userId] || { notifications: [], location: DEFAULT_LOCATION };
   } catch (error) {
     console.error('ERROR: Failed to read user preferences:', error.message);
+    // Create default empty file
+    saveUserPreferences(WEATHER_BOT_ADMIN_ID, { notifications: [], location: DEFAULT_LOCATION });
     return { notifications: [], location: DEFAULT_LOCATION };
   }
 }
@@ -767,6 +782,7 @@ function getUserPreferences(userId) {
  */
 function saveUserPreferences(userId, preferences) {
   try {
+    ensureDataDir();
     let data = {};
     try {
       const fileContent = fs.readFileSync(USER_PREFERENCES_FILE, 'utf8');
@@ -793,6 +809,8 @@ function getAllowedUsers() {
     return json.allowed_users || [];
   } catch (error) {
     console.error('ERROR: Failed to read allowed users:', error.message);
+    // Create default file with admin user
+    saveAllowedUsers([WEATHER_BOT_ADMIN_ID]);
     return [WEATHER_BOT_ADMIN_ID];
   }
 }
@@ -802,6 +820,7 @@ function getAllowedUsers() {
  */
 function saveAllowedUsers(users) {
   try {
+    ensureDataDir();
     const data = {
       admin: WEATHER_BOT_ADMIN_ID,
       allowed_users: users
@@ -822,6 +841,8 @@ function getUserLocation(userId) {
     return json[userId] || DEFAULT_LOCATION;
   } catch (error) {
     console.error('ERROR: Failed to read user location:', error.message);
+    // Create default file with admin location
+    saveUserLocation(WEATHER_BOT_ADMIN_ID, DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lon, DEFAULT_LOCATION.name);
     return DEFAULT_LOCATION;
   }
 }
@@ -831,6 +852,7 @@ function getUserLocation(userId) {
  */
 function saveUserLocation(userId, lat, lon, name) {
   try {
+    ensureDataDir();
     let data = {};
     try {
       const fileContent = fs.readFileSync(USER_LOCATIONS_FILE, 'utf8');
