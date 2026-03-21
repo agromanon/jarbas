@@ -28,6 +28,7 @@ const { spawn } = require('child_process');
 const DATA_DIR = path.join(__dirname, '../data');
 const ALLOWED_USERS_FILE = path.join(DATA_DIR, 'allowed-users.json');
 const USER_LOCATIONS_FILE = path.join(DATA_DIR, 'user-locations.json');
+const USER_PREFERENCES_FILE = path.join(DATA_DIR, 'user-preferences.json');
 
 const WEATHER_BOT_TOKEN = process.env.WEATHER_BOT_TOKEN;
 const WEATHER_BOT_ADMIN_ID = parseInt(process.env.WEATHER_BOT_ADMIN_ID || '0');
@@ -184,6 +185,17 @@ async function handleCallbackQuery(callbackQuery) {
     await handleCityLocation(chatId, data);
   } else if (data === 'help') {
     await showHelp(chatId);
+  } else if (data === 'config_menu') {
+    await showConfigMenu(chatId);
+  } else if (data.startsWith('config_toggle_')) {
+    const hour = parseInt(data.replace('config_toggle_', ''));
+    if (await handleToggleHour(chatId, hour)) {
+      await showConfigMenu(chatId);
+    }
+  } else if (data === 'config_save') {
+    await handleSaveConfig(chatId);
+  } else if (data === 'config_clear') {
+    await handleClearConfig(chatId);
   }
 }
 
@@ -240,7 +252,10 @@ async function showForecastMenu(chatId) {
         { text: '📆 Próximos 7 dias', callback_data: 'weather_7days' }
       ],
       [
-        { text: '📍 Alterar Localização', callback_data: 'location_menu' },
+        { text: '⚙️ Configurar horários', callback_data: 'config_menu' },
+        { text: '📍 Alterar Localização', callback_data: 'location_menu' }
+      ],
+      [
         { text: '❓ Ajuda', callback_data: 'help' }
       ]
     ]
@@ -450,6 +465,122 @@ async function handleCityLocation(chatId, command) {
 }
 
 /**
+ * Show configuration menu for notification hours
+ */
+async function showConfigMenu(chatId) {
+  const preferences = getUserPreferences(chatId);
+  const notifications = preferences.notifications || [];
+
+  // Build inline keyboard with hour selection
+  const hours = [6, 8, 10, 12, 14, 16, 18];
+
+  const replyMarkup = {
+    inline_keyboard: []
+  };
+
+  // Add hour buttons in rows of 3
+  for (let i = 0; i < hours.length; i += 3) {
+    const row = [];
+    for (let j = i; j < i + 3 && j < hours.length; j++) {
+      const hour = hours[j];
+      const hourStr = hour.toString().padStart(2, '0') + ':00';
+      const isSelected = notifications.includes(hour);
+      const icon = isSelected ? '✅' : '⬜';
+      row.push({
+        text: `${icon} ${hourStr}`,
+        callback_data: `config_toggle_${hour}`
+      });
+    }
+    replyMarkup.inline_keyboard.push(row);
+  }
+
+  // Add action buttons
+  replyMarkup.inline_keyboard.push([
+    { text: '💾 Salvar', callback_data: 'config_save' },
+    { text: '🗑️ Desativar todas', callback_data: 'config_clear' }
+  ]);
+  replyMarkup.inline_keyboard.push([
+    { text: '⬅️ Voltar', callback_data: 'menu' }
+  ]);
+
+  const selectedCount = notifications.length;
+  const responseText = `⚙️ *Configurar Horários de Notificação*\n\n` +
+    `Escolha até 3 horários para receber a previsão do tempo:\n\n` +
+    `Selecionados: ${selectedCount}/3\n\n` +
+    `Clique nos horários para marcar/desmarcar:`;
+
+  await sendTelegramMessage(chatId, responseText, {
+    reply_markup: replyMarkup,
+    parse_mode: 'Markdown'
+  });
+
+  console.log('✓ Config menu sent to Telegram');
+}
+
+/**
+ * Toggle hour selection in configuration
+ */
+async function handleToggleHour(chatId, hour) {
+  const preferences = getUserPreferences(chatId);
+  let notifications = preferences.notifications || [];
+
+  const hourIndex = notifications.indexOf(hour);
+
+  if (hourIndex === -1) {
+    // Add hour if not selected (max 3)
+    if (notifications.length >= 3) {
+      await sendTelegramMessage(chatId, '⚠️ Você já selecionou 3 horários. Desmarque um para selecionar outro.');
+      return false;
+    }
+    notifications.push(hour);
+    notifications.sort((a, b) => a - b);
+  } else {
+    // Remove hour if already selected
+    notifications.splice(hourIndex, 1);
+  }
+
+  preferences.notifications = notifications;
+  saveUserPreferences(chatId, preferences);
+
+  return true;
+}
+
+/**
+ * Save configuration
+ */
+async function handleSaveConfig(chatId) {
+  const preferences = getUserPreferences(chatId);
+  const notifications = preferences.notifications || [];
+
+  if (notifications.length === 0) {
+    await sendTelegramMessage(chatId, '⚠️ Nenhum horário selecionado. Selecione pelo menos um horário.');
+    return;
+  }
+
+  const selectedHours = notifications.map(h => h.toString().padStart(2, '0') + 'h').join(', ');
+  await sendTelegramMessage(chatId, `✅ *Configuração salva!*\n\nVocê receberá previsões às: ${selectedHours}`, {
+    parse_mode: 'Markdown'
+  });
+
+  console.log(`✓ Configuration saved for ${chatId}: ${selectedHours}`);
+}
+
+/**
+ * Clear all notification preferences
+ */
+async function handleClearConfig(chatId) {
+  const preferences = getUserPreferences(chatId);
+  preferences.notifications = [];
+  saveUserPreferences(chatId, preferences);
+
+  await sendTelegramMessage(chatId, '🗑️ *Todos os horários desativados.*\n\nVocê não receberá mais notificações automáticas.', {
+    parse_mode: 'Markdown'
+  });
+
+  console.log(`✓ Configuration cleared for ${chatId}`);
+}
+
+/**
  * Show help message
  */
 async function showHelp(chatId) {
@@ -615,6 +746,41 @@ async function handleListUsers(chatId) {
 function isAuthorized(userId) {
   const allowedUsers = getAllowedUsers();
   return allowedUsers.includes(userId);
+}
+
+/**
+ * Get user notification preferences
+ */
+function getUserPreferences(userId) {
+  try {
+    const data = fs.readFileSync(USER_PREFERENCES_FILE, 'utf8');
+    const json = JSON.parse(data);
+    return json[userId] || { notifications: [], location: DEFAULT_LOCATION };
+  } catch (error) {
+    console.error('ERROR: Failed to read user preferences:', error.message);
+    return { notifications: [], location: DEFAULT_LOCATION };
+  }
+}
+
+/**
+ * Save user notification preferences
+ */
+function saveUserPreferences(userId, preferences) {
+  try {
+    let data = {};
+    try {
+      const fileContent = fs.readFileSync(USER_PREFERENCES_FILE, 'utf8');
+      data = JSON.parse(fileContent);
+    } catch (error) {
+      // File doesn't exist or is invalid, start fresh
+    }
+
+    data[userId] = preferences;
+
+    fs.writeFileSync(USER_PREFERENCES_FILE, JSON.stringify(data, null, 2));
+  } catch (error) {
+    console.error('ERROR: Failed to save user preferences:', error.message);
+  }
 }
 
 /**
