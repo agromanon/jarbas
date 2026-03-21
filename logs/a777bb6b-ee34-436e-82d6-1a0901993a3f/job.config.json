@@ -1,0 +1,4 @@
+{
+  "title": "Fix Weather Forecast Script JSON Output",
+  "job": "Job: Corrigir script de previsão do tempo\n\n1. **Editar `skills/weather-forecast/forecast.sh`**:\n   - Remover o `echo -e \"${BLUE}Fetching weather data for ${LOCATION_NAME}...${NC}\"` de dentro da função `fetch_weather`\n   - Mover essa mensagem para a função `main`, antes de chamar `fetch_weather`, para não contaminar o JSON retornado\n\n2. **Testar o script**:\n   - Executar `skills/active/weather-forecast/forecast.sh`\n   - Verificar se a mensagem de previsão do tempo chega corretamente no Telegram\n\n3. **Se houver erro**, corrigir e testar novamente até funcionar"
+}
