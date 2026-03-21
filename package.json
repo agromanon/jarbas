@@ -7,6 +7,7 @@
     "start": "next start",
     "setup": "thepopebot setup",
     "setup-telegram": "thepopebot setup-telegram",
+    "setup-weather": "./setup-weather-webhook.sh",
     "reset-auth": "thepopebot reset-auth"
   },
   "dependencies": {
