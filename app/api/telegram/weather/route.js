@@ -1,13 +1,14 @@
 /**
- * Telegram Webhook Handler with Weather Support
+ * Telegram Webhook Handler with Weather and Weather-Bot Support
  *
  * This API route handles Telegram updates and:
  * 1. Forwards weather commands (/tempo, previsão) to the weather handler
- * 2. Forwards all updates to the original thepopebot Telegram webhook handler
+ * 2. Forwards weather-bot commands (/start, /menu, /location, etc.) to the weather-bot handler
+ * 3. Forwards all updates to the original thepopebot Telegram webhook handler
  *
  * To use this as your Telegram webhook:
  * 1. Set the webhook URL to: https://your-domain.com/api/telegram/weather
- * 2. This will handle both weather commands and thepopebot features
+ * 2. This will handle weather commands, weather-bot features, and thepopebot features
  *
  * Usage:
  *   POST /api/telegram/weather
@@ -54,7 +55,7 @@ async function forwardToThpopebotHandler(update) {
 }
 
 /**
- * Forward update to the weather handler
+ * Forward update to the weather handler (original)
  */
 async function forwardToWeatherHandler(update) {
   try {
@@ -84,6 +85,89 @@ async function forwardToWeatherHandler(update) {
   }
 }
 
+/**
+ * Forward update to the weather-bot handler (advanced)
+ */
+async function forwardToWeatherBotHandler(update) {
+  try {
+    const updateJson = JSON.stringify(update).replace(/'/g, "'\\''");
+
+    const { stdout, stderr } = await execAsync(
+      `node /job/triggers/weather-bot.js '${updateJson}'`,
+      {
+        env: {
+          ...process.env,
+          WEATHER_BOT_TOKEN: process.env.WEATHER_BOT_TOKEN,
+          WEATHER_BOT_ADMIN_ID: process.env.WEATHER_BOT_ADMIN_ID
+        },
+        timeout: 30000 // 30 second timeout
+      }
+    );
+
+    console.log('Weather-bot handler output:', stdout);
+    if (stderr) {
+      console.error('Weather-bot handler stderr:', stderr);
+    }
+    return true;
+  } catch (error) {
+    console.error('Error running weather-bot handler:', error.message);
+    // Don't fail - the handler might have already responded
+    return false;
+  }
+}
+
+/**
+ * Detect if this is a weather-bot command
+ * Weather-bot commands: /start, /menu, /location, /allow, /disallow, /listusers, /help
+ * Also handles all callback queries (weather-bot uses extensive inline keyboards)
+ */
+function isWeatherBotCommand(update) {
+  const hasMessage = update.message && update.message.text;
+  const hasCallbackQuery = update.callback_query;
+  const hasLocation = update.message && update.message.location;
+
+  // Callback queries are used by weather-bot
+  if (hasCallbackQuery) {
+    return true;
+  }
+
+  // Location sharing is used by weather-bot
+  if (hasLocation) {
+    return true;
+  }
+
+  // Check text commands
+  if (hasMessage) {
+    const text = update.message.text.trim().toLowerCase();
+    const weatherBotCommands = ['/start', '/menu', '/location', '/allow', '/disallow', '/listusers', '/help', 'menu', 'localização', 'ajuda', 'listar'];
+    return weatherBotCommands.some(cmd => text === cmd || text.startsWith(cmd + ' ')) || text.startsWith('city:') || text.startsWith('cidade:');
+  }
+
+  return false;
+}
+
+/**
+ * Detect if this is a weather (original) command
+ * Weather commands: /tempo, previsão
+ */
+function isWeatherCommand(update) {
+  const hasMessage = update.message && update.message.text;
+  const hasCallbackQuery = update.callback_query;
+
+  // Callback queries starting with "weather_" are from the original weather handler
+  if (hasCallbackQuery && update.callback_query.data && update.callback_query.data.startsWith('weather_')) {
+    return true;
+  }
+
+  // Check text commands
+  if (hasMessage) {
+    const text = update.message.text.trim().toLowerCase();
+    return text === '/tempo' || text === 'previsão';
+  }
+
+  return false;
+}
+
 export async function POST(request) {
   try {
     // Parse the Telegram update
@@ -92,19 +176,17 @@ export async function POST(request) {
     // Log the update for debugging
     console.log('Telegram update received:', JSON.stringify(update, null, 2));
 
-    // Check if it contains a message or callback query
-    const hasMessage = update.message && update.message.text;
-    const hasCallbackQuery = update.callback_query;
+    // Check which handler(s) should process this update
+    const isWeatherBot = isWeatherBotCommand(update);
+    const isWeather = isWeatherCommand(update);
 
-    // Check if it's a weather command
-    let isWeatherCommand = false;
-    if (hasMessage) {
-      const text = update.message.text.trim().toLowerCase();
-      isWeatherCommand = text === '/tempo' || text === 'previsão';
+    // Handle weather-bot commands first (more specific)
+    if (isWeatherBot) {
+      await forwardToWeatherBotHandler(update);
     }
 
-    // Handle weather commands and callbacks
-    if (isWeatherCommand || hasCallbackQuery) {
+    // Handle original weather commands
+    if (isWeather) {
       await forwardToWeatherHandler(update);
     }
 
@@ -123,9 +205,12 @@ export async function POST(request) {
 // Handle GET requests (for testing and webhook verification)
 export async function GET() {
   return NextResponse.json({
-    message: 'Telegram Webhook Handler with Weather Support',
+    message: 'Telegram Webhook Handler with Weather and Weather-Bot Support',
     features: [
       'Weather commands: /tempo, previsão',
+      'Weather-bot commands: /start, /menu, /location, /help',
+      'Admin commands: /allow, /disallow, /listusers',
+      'Location sharing via GPS/IP/Manual',
       'Inline keyboard with forecast options',
       'Integration with thepopebot chat features'
     ],
