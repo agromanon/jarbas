@@ -66,5 +66,19 @@
     "type": "command",
     "command": "skills/weather-forecast/forecast.sh",
     "enabled": true
+  },
+  {
+    "name": "weather-bot-morning",
+    "schedule": "0 6 * * *",
+    "type": "command",
+    "command": "skills/weather-bot/send-daily.sh",
+    "enabled": true
+  },
+  {
+    "name": "weather-bot-lunch",
+    "schedule": "0 12 * * *",
+    "type": "command",
+    "command": "skills/weather-bot/send-daily.sh",
+    "enabled": true
   }
 ]
