@@ -82,8 +82,6 @@ get_weather_emoji() {
 fetch_weather() {
     local url="https://api.open-meteo.com/v1/forecast?latitude=${LATITUDE}&longitude=${LONGITUDE}&hourly=temperature_2m,precipitation_probability,precipitation&forecast_days=2&timezone=${TIMEZONE}"
 
-    echo -e "${BLUE}Fetching weather data for ${LOCATION_NAME}...${NC}"
-
     local response
     response=$(curl -s --fail --max-time 30 "$url" 2>&1) || {
         error "Failed to fetch weather data: $response"
@@ -223,6 +221,8 @@ main() {
 
     check_dependencies
     check_env_vars
+
+    echo -e "${BLUE}Fetching weather data for ${LOCATION_NAME}...${NC}"
 
     # Fetch weather data
     local weather_json
