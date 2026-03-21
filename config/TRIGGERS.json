@@ -8,6 +8,14 @@
     "enabled": true
   },
   {
+    "name": "telegram-weather",
+    "watch_path": "/webhook/telegram-weather",
+    "actions": [
+      { "type": "command", "command": "node triggers/handle-telegram-weather.js '{{body}}'" }
+    ],
+    "enabled": true
+  },
+  {
     "name": "on-github-event",
     "watch_path": "/github/webhook",
     "actions": [

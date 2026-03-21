@@ -1,6 +1,13 @@
 #!/bin/bash
 # Weather Forecast Script for São Paulo Zona Oeste
 # Fetches weather data from Open-Meteo and sends to Telegram
+#
+# Usage: forecast.sh [type]
+#   type: "today" (default), "tomorrow", "3days", "7days"
+#   type: "morning" - 8h to 12h (for manual/cron use)
+#   type: "afternoon" - 13h to 18h (for manual/cron use)
+#
+# Output format: JSON with "message" field containing the formatted forecast
 
 # Configuration
 LATITUDE="-23.55"
@@ -9,6 +16,10 @@ LOCATION_NAME="São Paulo Zona Oeste"
 TIMEZONE="America/Sao_Paulo"
 START_HOUR=8
 END_HOUR=18
+
+# Parse command line arguments
+FORECAST_TYPE="${1:-today}"
+OUTPUT_JSON="${2:-false}"
 
 # Telegram configuration
 TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN}"
@@ -54,7 +65,66 @@ check_env_vars() {
 
 # Get current date in Portuguese
 get_date_pt() {
-    date '+%A, %d/%m/%Y' | sed 's/Monday/Segunda-feira/;s/Tuesday/Terça-feira/;s/Wednesday/Quarta-feira/;s/Thursday/Quinta-feira/;s/Friday/Sexta-feira/;s/Saturday/Sábado/;s/Sunday/Domingo/'
+    local date_str="$1"
+    date -d "$date_str" '+%A, %d/%m/%Y' | sed 's/Monday/Segunda-feira/;s/Tuesday/Terça-feira/;s/Wednesday/Quarta-feira/;s/Thursday/Quinta-feira/;s/Friday/Sexta-feira/;s/Saturday/Sábado/;s/Sunday/Domingo/'
+}
+
+# Get number of forecast days based on type
+get_forecast_days() {
+    local type="$1"
+    case "$type" in
+        today|tomorrow|morning|afternoon)
+            echo "2"
+            ;;
+        3days)
+            echo "4"
+            ;;
+        7days)
+            echo "8"
+            ;;
+        *)
+            echo "2"
+            ;;
+    esac
+}
+
+# Get target date for filtering
+get_target_date() {
+    local type="$1"
+    local offset=0
+
+    case "$type" in
+        today|morning|afternoon)
+            offset=0
+            ;;
+        tomorrow)
+            offset=1
+            ;;
+        3days)
+            offset=2
+            ;;
+        7days)
+            offset=6
+            ;;
+    esac
+
+    date -d "+${offset} days" '+%Y-%m-%d'
+}
+
+# Get end date for filtering (for multi-day forecasts)
+get_end_date() {
+    local type="$1"
+    case "$type" in
+        today|tomorrow|morning|afternoon)
+            get_target_date "$type"
+            ;;
+        3days|7days)
+            get_target_date "$type"
+            ;;
+        *)
+            date '+%Y-%m-%d'
+            ;;
+    esac
 }
 
 # Get weather emoji based on rain probability
@@ -80,7 +150,8 @@ get_weather_emoji() {
 
 # Fetch weather data from Open-Meteo
 fetch_weather() {
-    local url="https://api.open-meteo.com/v1/forecast?latitude=${LATITUDE}&longitude=${LONGITUDE}&hourly=temperature_2m,precipitation_probability,precipitation&forecast_days=2&timezone=${TIMEZONE}"
+    local forecast_days=$(get_forecast_days "$FORECAST_TYPE")
+    local url="https://api.open-meteo.com/v1/forecast?latitude=${LATITUDE}&longitude=${LONGITUDE}&hourly=temperature_2m,precipitation_probability,precipitation&forecast_days=${forecast_days}&timezone=${TIMEZONE}"
 
     local response
     response=$(curl -s --fail --max-time 30 "$url" 2>&1) || {
@@ -113,10 +184,33 @@ format_weather_message() {
         error "No weather data received from API"
     fi
 
+    # Build message header based on type
+    local header_title="Previsão do Tempo"
+    case "$FORECAST_TYPE" in
+        today|morning|afternoon)
+            header_title="Previsão do Tempo - Hoje"
+            ;;
+        tomorrow)
+            header_title="Previsão do Tempo - Amanhã"
+            ;;
+        3days)
+            header_title="Previsão do Tempo - Próximos 3 dias"
+            ;;
+        7days)
+            header_title="Previsão do Tempo - Próximos 7 dias"
+            ;;
+    esac
+
     # Build message
-    local message="🌤️ Previsão do Tempo - ${LOCATION_NAME}\n"
+    local message="🌤️ ${header_title} - ${LOCATION_NAME}\n"
     message+="━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-    message+="📅 $(get_date_pt)\n\n"
+
+    # For multi-day forecasts, we'll add dates inline
+    # For single-day forecasts, add the date at the top
+    if [ "$FORECAST_TYPE" = "today" ] || [ "$FORECAST_TYPE" = "tomorrow" ] || [ "$FORECAST_TYPE" = "morning" ] || [ "$FORECAST_TYPE" = "afternoon" ]; then
+        local target_date=$(get_target_date "$FORECAST_TYPE")
+        message+="📅 $(get_date_pt "${target_date}")\n\n"
+    fi
 
     # Parse hourly data
     local count=0
@@ -144,10 +238,40 @@ format_weather_message() {
         rain_amount_array+=("$rain_amount")
     done <<< "$rain_amounts"
 
-    # Get today's date for filtering
+    # Get date filtering parameters
     local today_date=$(date '+%Y-%m-%d')
+    local current_hour=$(TZ="${TIMEZONE}" date '+%H' | sed 's/^0//')
 
-    # Loop through hours and filter for 8am-6pm AND today's date
+    # For multi-day forecasts, start from today
+    local start_date
+    if [ "$FORECAST_TYPE" = "3days" ] || [ "$FORECAST_TYPE" = "7days" ]; then
+        start_date="$today_date"
+    else
+        start_date=$(get_target_date "$FORECAST_TYPE")
+    fi
+    local end_date=$(get_end_date "$FORECAST_TYPE")
+
+    # For today/morning/afternoon, filter by current hour
+    local filter_current_hour=false
+    if [ "$FORECAST_TYPE" = "today" ] || [ "$FORECAST_TYPE" = "morning" ] || [ "$FORECAST_TYPE" = "afternoon" ]; then
+        filter_current_hour=true
+    fi
+
+    # Adjust hour range for morning/afternoon
+    local start_hour_filter=$START_HOUR
+    local end_hour_filter=$END_HOUR
+    if [ "$FORECAST_TYPE" = "morning" ]; then
+        start_hour_filter=8
+        end_hour_filter=12
+    elif [ "$FORECAST_TYPE" = "afternoon" ]; then
+        start_hour_filter=13
+        end_hour_filter=18
+    fi
+
+    # Track last displayed date for multi-day forecasts
+    local last_displayed_date=""
+
+    # Loop through hours and filter
     for i in "${!time_array[@]}"; do
         local time="${time_array[$i]}"
         local temp="${temp_array[$i]}"
@@ -158,8 +282,27 @@ format_weather_message() {
         local date=$(echo "$time" | grep -oP '^[0-9]{4}-[0-9]{2}-[0-9]{2}')
         local hour=$(echo "$time" | grep -oP 'T\K[0-9]{2}' | sed 's/^0//')
 
-        # Only include hours between START_HOUR and END_HOUR AND today's date
-        if [ "$date" = "$today_date" ] && [ -n "$hour" ] && [ "$hour" -ge "$START_HOUR" ] && [ "$hour" -le "$END_HOUR" ]; then
+        # Check if date is within range
+        local within_date_range=false
+        if [[ "$date" > "$start_date" ]] || [ "$date" = "$start_date" ]; then
+            if [[ "$date" < "$end_date" ]] || [ "$date" = "$end_date" ]; then
+                within_date_range=true
+            fi
+        fi
+
+        # Only include if within date range and within hour range
+        if [ "$within_date_range" = true ] && [ -n "$hour" ] && [ "$hour" -ge "$start_hour_filter" ] && [ "$hour" -le "$end_hour_filter" ]; then
+            # For today, also filter by current hour
+            if [ "$filter_current_hour" = true ] && [ "$date" = "$today_date" ] && [ "$hour" -lt "$current_hour" ]; then
+                continue
+            fi
+
+            # Add date separator for multi-day forecasts
+            if [ "$date" != "$last_displayed_date" ] && [ "$date" != "$start_date" ]; then
+                message+="\n📅 $(get_date_pt "${date}")\n"
+                last_displayed_date="$date"
+            fi
+
             # Format hour with leading zero
             local hour_formatted=$(printf "%02d" "$hour")
 
@@ -189,6 +332,15 @@ format_weather_message() {
 send_to_telegram() {
     local message="$1"
 
+    # If OUTPUT_JSON is true, output JSON and don't send
+    if [ "$OUTPUT_JSON" = "true" ]; then
+        # Escape special characters for JSON
+        # Convert newlines to \n, escape backslashes and quotes
+        local escaped_message=$(echo "$message" | sed ':a;N;$!ba;s/\n/\\n/g' | sed 's/\\/\\\\/g; s/"/\\"/g')
+        echo "{\"message\":\"${escaped_message}\"}"
+        return 0
+    fi
+
     echo -e "${BLUE}Sending message to Telegram...${NC}"
 
     # Escape special characters for JSON
@@ -214,15 +366,21 @@ send_to_telegram() {
 
 # Main function
 main() {
-    echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -e "${GREEN}  Weather Forecast Script${NC}"
-    echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo ""
+    # Don't print logs if outputting JSON
+    if [ "$OUTPUT_JSON" = "false" ]; then
+        echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo -e "${GREEN}  Weather Forecast Script${NC}"
+        echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo ""
+    fi
 
     check_dependencies
-    check_env_vars
 
-    echo -e "${BLUE}Fetching weather data for ${LOCATION_NAME}...${NC}"
+    # Only check env vars if not outputting JSON (for use by Telegram handler)
+    if [ "$OUTPUT_JSON" = "false" ]; then
+        check_env_vars
+        echo -e "${BLUE}Fetching weather data for ${LOCATION_NAME} (${FORECAST_TYPE})...${NC}"
+    fi
 
     # Fetch weather data
     local weather_json
@@ -232,19 +390,24 @@ main() {
     local formatted_message
     formatted_message=$(format_weather_message "$weather_json")
 
-    echo ""
-    echo -e "${BLUE}Formatted message:${NC}"
-    echo ""
-    echo -e "$formatted_message"
-    echo ""
+    # Output message if not JSON mode
+    if [ "$OUTPUT_JSON" = "false" ]; then
+        echo ""
+        echo -e "${BLUE}Formatted message:${NC}"
+        echo ""
+        echo -e "$formatted_message"
+        echo ""
+    fi
 
-    # Send to Telegram
+    # Send to Telegram (or output JSON)
     send_to_telegram "$formatted_message"
 
-    echo ""
-    echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -e "${GREEN}  ✓ Weather forecast sent successfully${NC}"
-    echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    if [ "$OUTPUT_JSON" = "false" ]; then
+        echo ""
+        echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo -e "${GREEN}  ✓ Weather forecast sent successfully${NC}"
+        echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    fi
 }
 
 # Run main function
