@@ -1,4 +1,0 @@
-{
-  "title": "Add jq Installation to Dockerfile for Persistence",
-  "job": "Job: Adicionar jq no Dockerfile para persistir instalação\n\n1. **Editar `Dockerfile`**:\n   - Adicionar linha para instalar o `jq`: `RUN apt-get update && apt-get install -y jq && rm -rf /var/lib/apt/lists/*`\n   - Colocar após o comando de instalação de dependências existente, ou em local apropriado\n\n2. **Verificar**:\n   - Confirmar que o Dockerfile está correto e não quebra o build\n\nIsso garantirá que o skill de previsão do tempo funcione automaticamente após reinicializações do container."
-}
