@@ -134,7 +134,7 @@ get_weather_emoji() {
 # Fetch weather data from Open-Meteo
 fetch_weather() {
     local forecast_days=$(get_forecast_days "$FORECAST_TYPE")
-    local url="https://api.open-meteo.com/v1/forecast?latitude=${LATITUDE}&longitude=${LONGITUDE}&hourly=temperature_2m,precipitation_probability,precipitation&forecast_days=${forecast_days}&timezone=${TIMEZONE}"
+    local url="https://api.open-meteo.com/v1/forecast?latitude=${LATITUDE}&longitude=${LONGITUDE}&hourly=temperature_2m,precipitation_probability,precipitation&forecast_days=${forecast_days}&models=best_match&timezone=${TIMEZONE}"
 
     local response
     response=$(curl -s --fail --max-time 30 "$url" 2>&1) || {
