@@ -4,7 +4,7 @@ WORKDIR /app
 
 # Instala dependências do sistema
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends python3 make g++ curl git ca-certificates && \
+    apt-get install -y --no-install-recommends python3 make g++ curl git ca-certificates jq && \
     rm -rf /var/lib/apt/lists/*
 
 # Copia package.json e instala dependências
