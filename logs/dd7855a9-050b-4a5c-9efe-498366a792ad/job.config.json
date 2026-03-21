@@ -1,4 +1,0 @@
-{
-  "title": "Resolver conflitos de merge - manter suporte weather-bot e weather",
-  "job": "Job: Resolver conflitos de merge - PR #31\n\n## Conflitos identificados:\n1. `app/api/telegram/weather/route.js`\n2. `middleware.js`\n\n## Tarefas:\n\n### 1. Resolver conflito em app/api/telegram/weather/route.js\n- Manter a versão que inclui AMBOS:\n  - Suporte ao weather-bot (comandos /start, /menu, /location, etc.)\n  - Suporte ao weather original (/tempo, previsão)\n- A função forwardToWeatherBotHandler deve estar presente\n- A lógica deve detectar qual bot está sendo usado\n\n### 2. Resolver conflito em middleware.js\n- Manter a versão que permite rotas públicas:\n  - /api/telegram/weather\n  - /api/telegram/webhook/weather-bot\n- Usar a versão com publicPaths\n\n### 3. Commitar e push\n```bash\ngit add .\ngit commit -m \"Resolve merge conflicts - keep weather-bot and weather support\"\ngit push origin HEAD\n```\n\n### 4. Verificar se PR está pronto para merge"
-}
