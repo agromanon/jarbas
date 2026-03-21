@@ -59,7 +59,8 @@ async function forwardToThpopebotHandler(update) {
  */
 async function forwardToWeatherHandler(update) {
   try {
-    const updateJson = JSON.stringify(update).replace(/'/g, "'\\''");
+    // Escape single quotes for shell: ' becomes '"'"'
+    const updateJson = JSON.stringify(update).replace(/'/g, "'\"'\"'");
 
     const { stdout, stderr } = await execAsync(
       `node /job/triggers/handle-telegram-weather.js '${updateJson}'`,
@@ -90,7 +91,8 @@ async function forwardToWeatherHandler(update) {
  */
 async function forwardToWeatherBotHandler(update) {
   try {
-    const updateJson = JSON.stringify(update).replace(/'/g, "'\\''");
+    // Escape single quotes for shell: ' becomes '"'"'
+    const updateJson = JSON.stringify(update).replace(/'/g, "'\"'\"'");
 
     const { stdout, stderr } = await execAsync(
       `node /job/triggers/weather-bot.js '${updateJson}'`,
