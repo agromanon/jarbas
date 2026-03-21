@@ -1,4 +1,0 @@
-{
-  "title": "Resolver conflitos do PR #31",
-  "job": "Job: Resolver conflitos do PR #31\n\n1. **Verificar o estado atual do repositório:**\n   - git status\n   - git branch -a\n   - git log --oneline -5\n\n2. **Identificar os conflitos:**\n   - Listar arquivos com conflito\n   - Ver o conteúdo dos conflitos\n\n3. **Resolver os conflitos:**\n   - Para cada arquivo com conflito, resolver mantendo as mudanças corretas\n   - Priorizar as mudanças do weather-bot e ensemble\n\n4. **Commitar e push:**\n   - git add .\n   - git commit -m \"Resolve merge conflicts\"\n   - git push\n\n5. **Verificar se o PR pode ser mergeado**"
-}
