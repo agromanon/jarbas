@@ -977,7 +977,18 @@ async function getLocationName(lat, lon) {
   return new Promise((resolve, reject) => {
     const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&accept-language=pt-BR`;
 
-    https.get(url, (res) => {
+    const options = {
+      hostname: 'nominatim.openstreetmap.org',
+      port: 443,
+      path: `/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&accept-language=pt-BR`,
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Perninhasclimabot (Telegram Weather Bot) - Contact admin for API issues',
+        'Accept': 'application/json'
+      }
+    };
+
+    const req = https.request(options, (res) => {
       let data = '';
 
       res.on('data', (chunk) => {
@@ -986,6 +997,13 @@ async function getLocationName(lat, lon) {
 
       res.on('end', () => {
         try {
+          if (res.statusCode !== 200) {
+            console.error(`Nominatim API error: ${res.statusCode}`);
+            // Fallback to generic location name
+            resolve(`Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`);
+            return;
+          }
+
           const json = JSON.parse(data);
           if (json.display_name) {
             // Extract city/state from display name
@@ -1006,7 +1024,15 @@ async function getLocationName(lat, lon) {
           reject(error);
         }
       });
-    }).on('error', reject);
+    });
+
+    req.on('error', (error) => {
+      console.error('Nominatim request error:', error.message);
+      // Fallback to generic location name
+      resolve(`Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`);
+    });
+
+    req.end();
   });
 }
 
