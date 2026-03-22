@@ -1015,8 +1015,7 @@ async function getLocationName(lat, lon) {
  */
 async function getIPLocation() {
   return new Promise((resolve, reject) => {
-    const http = require('http');
-    http.get('http://ip-api.com/json/', (res) => {
+    https.get('https://ip-api.com/json/', (res) => {
       let data = '';
 
       res.on('data', (chunk) => {
