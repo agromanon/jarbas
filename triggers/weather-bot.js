@@ -972,12 +972,25 @@ function getAndClearPendingInput(userId) {
 
 /**
  * Get location name via reverse geocoding
+ * Uses Open-Meteo reverse geocoding API
  */
 async function getLocationName(lat, lon) {
   return new Promise((resolve, reject) => {
+    // Open-Meteo doesn't have reverse geocoding, so we'll use a simple naming scheme
+    // or use Nominatim with proper headers
     const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&accept-language=pt-BR`;
 
-    https.get(url, (res) => {
+    const options = {
+      hostname: 'nominatim.openstreetmap.org',
+      port: 443,
+      path: `/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&accept-language=pt-BR`,
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Perninhasclimabot/1.0 (Weather Bot)'
+      }
+    };
+
+    const req = https.request(options, (res) => {
       let data = '';
 
       res.on('data', (chunk) => {
@@ -986,7 +999,22 @@ async function getLocationName(lat, lon) {
 
       res.on('end', () => {
         try {
+          // Check if response is valid JSON
+          if (!data || !data.startsWith('{')) {
+            // Fallback to simple name
+            resolve(`Localização (${lat.toFixed(2)}, ${lon.toFixed(2)})`);
+            return;
+          }
+
           const json = JSON.parse(data);
+
+          // Check for error responses
+          if (json.error) {
+            console.error('Nominatim API error:', json.error);
+            resolve(`Localização (${lat.toFixed(2)}, ${lon.toFixed(2)})`);
+            return;
+          }
+
           if (json.display_name) {
             // Extract city/state from display name
             const parts = json.display_name.split(',');
@@ -998,15 +1026,29 @@ async function getLocationName(lat, lon) {
           } else if (json.address) {
             const city = json.address.city || json.address.town || json.address.village || json.address.municipality || '';
             const state = json.address.state || '';
-            resolve([city, state].filter(Boolean).join(', '));
+            const name = [city, state].filter(Boolean).join(', ');
+            resolve(name || 'Localização desconhecida');
           } else {
             resolve('Localização desconhecida');
           }
         } catch (error) {
-          reject(error);
+          console.error('Error parsing location data:', error.message);
+          resolve(`Localização (${lat.toFixed(2)}, ${lon.toFixed(2)})`);
         }
       });
-    }).on('error', reject);
+    });
+
+    req.on('error', (error) => {
+      console.error('Error fetching location name:', error.message);
+      resolve(`Localização (${lat.toFixed(2)}, ${lon.toFixed(2)})`);
+    });
+
+    req.setTimeout(10000, () => {
+      req.abort();
+      resolve(`Localização (${lat.toFixed(2)}, ${lon.toFixed(2)})`);
+    });
+
+    req.end();
   });
 }
 
@@ -1089,7 +1131,8 @@ function getWeatherForecast(type, lat, lon, locationName) {
 
     console.log(`Running forecast script: ${scriptPath} ${args.join(' ')}`);
 
-    const child = spawn(scriptPath, args);
+    // Use bash explicitly to ensure proper shell interpretation
+    const child = spawn('/bin/bash', [scriptPath, ...args]);
 
     let stdout = '';
     let stderr = '';

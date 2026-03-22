@@ -43,3 +43,4 @@ temp/
 
 # Backups from thepopebot upgrades
 .backups/
+/data
