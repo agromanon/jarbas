@@ -1015,7 +1015,7 @@ async function getLocationName(lat, lon) {
  */
 async function getIPLocation() {
   return new Promise((resolve, reject) => {
-    https.get('https://ip-api.com/json/', (res) => {
+    https.get('https://ipinfo.io/json', (res) => {
       let data = '';
 
       res.on('data', (chunk) => {
@@ -1025,14 +1025,16 @@ async function getIPLocation() {
       res.on('end', () => {
         try {
           const json = JSON.parse(data);
-          if (json.status === 'success') {
-            resolve({
-              lat: json.lat,
-              lon: json.lon,
-              name: `${json.city}, ${json.regionName}`
-            });
+          if (json.error) {
+            reject(new Error(json.error || 'Failed to get IP location'));
           } else {
-            reject(new Error(json.message || 'Failed to get IP location'));
+            // ipinfo.io returns location as "lat,lon" string in the "loc" field
+            const locParts = json.loc.split(',');
+            resolve({
+              lat: parseFloat(locParts[0]),
+              lon: parseFloat(locParts[1]),
+              name: `${json.city}, ${json.region}`
+            });
           }
         } catch (error) {
           reject(error);
