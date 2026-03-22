@@ -1,4 +1,0 @@
-{
-  "title": "Investigating weather-bot.js issues",
-  "job": "No arquivo `triggers/weather-bot.js`, corrija os seguintes problemas:\n\n1. **Caminho da skill de weather:** Substitua `/job/skills/weather-bot/weather.sh` por `/app/skills/weather-bot/weather.sh`\n\n2. **Callbacks que retornam null:** Os callbacks `config_menu`, `location_menu` e `help` estão retornando `null` quando clicados. Investigue o código e corrija para que:\n   - `config_menu` mostre um menu de configuração de horários\n   - `location_menu` mostre o menu de alteração de localização\n   - `help` mostre a mensagem de ajuda\n\nVerifique se as funções `showConfigMenu`, `showLocationMenu` e `showHelp` existem e estão sendo chamadas corretamente no handler de callback. Se não existirem, implemente-as.\n\nFaça commit da mudança com mensagem \"fix: corrige caminhos da skill e callbacks do menu do weather-bot\""
-}
