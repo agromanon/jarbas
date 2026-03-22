@@ -95,7 +95,7 @@ async function forwardToWeatherBotHandler(update) {
     const updateJson = JSON.stringify(update).replace(/'/g, "'\"'\"'");
 
     const { stdout, stderr } = await execAsync(
-      `node /app/triggers/weather-bot.js '${updateJson}'`,
+      `node /job/triggers/weather-bot.js '${updateJson}'`,
       {
         env: {
           ...process.env,

@@ -977,7 +977,13 @@ async function getLocationName(lat, lon) {
   return new Promise((resolve, reject) => {
     const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&accept-language=pt-BR`;
 
-    https.get(url, (res) => {
+    const options = {
+      headers: {
+        'User-Agent': 'PerninhasClimabot/1.0 (thepopebot weather bot)'
+      }
+    };
+
+    https.get(url, options, (res) => {
       let data = '';
 
       res.on('data', (chunk) => {
@@ -987,6 +993,13 @@ async function getLocationName(lat, lon) {
       res.on('end', () => {
         try {
           const json = JSON.parse(data);
+
+          if (json.error) {
+            // Fallback to generic name if API returns error
+            resolve(`Localização (${lat.toFixed(4)}, ${lon.toFixed(4)})`);
+            return;
+          }
+
           if (json.display_name) {
             // Extract city/state from display name
             const parts = json.display_name.split(',');
@@ -1133,7 +1146,12 @@ function getWeatherForecast(type, lat, lon, locationName) {
 async function answerCallbackQuery(callbackId, text = null) {
   const postData = JSON.stringify({ callback_query_id: callbackId, text });
 
-  await makeTelegramRequest('/answerCallbackQuery', postData);
+  try {
+    await makeTelegramRequest('/answerCallbackQuery', postData);
+  } catch (error) {
+    // Log the error but don't fail - callback might have already expired
+    console.log(`Failed to answer callback query (may be expired): ${error.message}`);
+  }
 }
 
 /**
