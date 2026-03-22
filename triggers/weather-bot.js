@@ -986,7 +986,7 @@ async function geocodeCity(cityName) {
  */
 function getWeatherForecast(type, lat, lon, locationName) {
   return new Promise((resolve, reject) => {
-    const scriptPath = '/job/skills/weather-bot/weather.sh';
+    const scriptPath = '/app/skills/weather-bot/weather.sh';
     const args = [type, lat.toString(), lon.toString(), locationName];
 
     console.log(`Running forecast script: ${scriptPath} ${args.join(' ')}`);
