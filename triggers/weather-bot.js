@@ -128,7 +128,57 @@ async function handleMessage(message) {
     return;
   }
 
+  const command = text.toLowerCase();
+
+  // Process commands FIRST before checking for pending input
+  // This prevents commands like /start from being treated as city names
+  switch (command) {
+    case '/start':
+      await handleStart(chatId);
+      return;
+    case '/menu':
+    case 'menu':
+      await showForecastMenu(chatId);
+      return;
+    case '/location':
+    case 'localização':
+      await showLocationMenu(chatId);
+      return;
+    case '/help':
+    case 'ajuda':
+      await showHelp(chatId);
+      return;
+    case '/allow':
+    case '/disallow':
+    case '/listusers':
+    case '/listar':
+      // Handle admin commands with arguments below
+      break;
+    default:
+      if (command.startsWith('/allow ')) {
+        await handleAllow(chatId, command);
+        return;
+      } else if (command.startsWith('/disallow ')) {
+        await handleDisallow(chatId, command);
+        return;
+      } else if (command === '/listusers' || command === '/listar') {
+        await handleListUsers(chatId);
+        return;
+      } else if (command.startsWith('city:') || command.startsWith('cidade:')) {
+        await handleCityLocation(chatId, command);
+        return;
+      }
+      // If it's a command starting with / but not recognized
+      if (command.startsWith('/')) {
+        await sendTelegramMessage(chatId, '❓ Comando não reconhecido.\n\nUse /help para ver a lista de comandos disponíveis.');
+        return;
+      }
+      // Continue to pending input check for non-command text
+      break;
+  }
+
   // Check for pending input (e.g., waiting for city name)
+  // Only for text that is NOT a command
   const pendingInput = getAndClearPendingInput(userId);
   if (pendingInput) {
     console.log(`Processing pending input for ${userId}: ${pendingInput.type}`);
@@ -138,38 +188,8 @@ async function handleMessage(message) {
     }
   }
 
-  const command = text.toLowerCase();
-
-  switch (command) {
-    case '/start':
-      await handleStart(chatId);
-      break;
-    case '/menu':
-    case 'menu':
-      await showForecastMenu(chatId);
-      break;
-    case '/location':
-    case 'localização':
-      await showLocationMenu(chatId);
-      break;
-    case '/help':
-    case 'ajuda':
-      await showHelp(chatId);
-      break;
-    default:
-      if (command.startsWith('/allow ')) {
-        await handleAllow(chatId, command);
-      } else if (command.startsWith('/disallow ')) {
-        await handleDisallow(chatId, command);
-      } else if (command === '/listusers' || command === '/listar') {
-        await handleListUsers(chatId);
-      } else if (command.startsWith('city:') || command.startsWith('cidade:')) {
-        await handleCityLocation(chatId, command);
-      } else {
-        // Unknown command
-        await sendTelegramMessage(chatId, '❓ Comando não reconhecido.\n\nUse /help para ver a lista de comandos disponíveis.');
-      }
-  }
+  // If we got here, it's an unknown message
+  await sendTelegramMessage(chatId, '❓ Comando não reconhecido.\n\nUse /help para ver a lista de comandos disponíveis.');
 }
 
 /**
@@ -370,9 +390,10 @@ async function handleWeatherForecast(chatId, data) {
  * Request user's GPS location
  */
 async function requestLocation(chatId) {
-  const responseText = '📍 Por favor, compartilhe sua localização clicando no botão abaixo:';
+  const responseText = '📍 *Compartilhe sua localização*\n\n_Um botão aparecerá no teclado do chat. Clique nele para enviar sua localização GPS._';
 
   await sendTelegramMessage(chatId, responseText, {
+    parse_mode: 'Markdown',
     reply_markup: {
       keyboard: [[
         { text: '📍 Enviar Localização', request_location: true }
@@ -402,8 +423,10 @@ async function handleLocationSharing(chatId, location) {
     const responseText = `✅ *Localização atualizada!*\n\n📍 ${locationName}\n\nLat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`;
 
     await sendTelegramMessage(chatId, responseText, {
-      reply_markup: { remove_keyboard: true },
-      parse_mode: 'Markdown'
+      parse_mode: 'Markdown',
+      reply_markup: {
+        remove_keyboard: true
+      }
     });
 
     console.log(`✓ Location saved for ${chatId}: ${locationName}`);
@@ -450,11 +473,12 @@ async function requestCityName(chatId) {
   // Set pending input state to track that we're waiting for a city name
   setPendingInput(userId, 'city_name');
 
-  const responseText = '✏️ Digite o nome da cidade:\n\nExemplo: São Paulo, Rio de Janeiro, Curitiba';
+  const responseText = '✏️ *Digite o nome da cidade:*\n\nExemplo: São Paulo, Rio de Janeiro, Curitiba\n\n_Digite apenas o nome da cidade e envie._';
 
   await sendTelegramMessage(chatId, responseText, {
+    parse_mode: 'Markdown',
     reply_markup: {
-      force_reply: true
+      remove_keyboard: true
     }
   });
 
@@ -991,7 +1015,8 @@ async function getLocationName(lat, lon) {
  */
 async function getIPLocation() {
   return new Promise((resolve, reject) => {
-    https.get('http://ip-api.com/json/', (res) => {
+    const http = require('http');
+    http.get('http://ip-api.com/json/', (res) => {
       let data = '';
 
       res.on('data', (chunk) => {
@@ -1059,7 +1084,7 @@ async function geocodeCity(cityName) {
  */
 function getWeatherForecast(type, lat, lon, locationName) {
   return new Promise((resolve, reject) => {
-    const scriptPath = '/app/skills/weather-bot/weather.sh';
+    const scriptPath = '/job/skills/weather-bot/weather.sh';
     const args = [type, lat.toString(), lon.toString(), locationName];
 
     console.log(`Running forecast script: ${scriptPath} ${args.join(' ')}`);
@@ -1086,7 +1111,9 @@ function getWeatherForecast(type, lat, lon, locationName) {
 
       try {
         const result = JSON.parse(stdout.trim());
-        resolve(result.message);
+        // Convert escaped newlines (\n) to actual newline characters
+        const message = result.message.replace(/\\n/g, '\n');
+        resolve(message);
       } catch (error) {
         console.error('Failed to parse forecast JSON:', stdout);
         reject(new Error(`Failed to parse forecast JSON: ${error.message}`));
