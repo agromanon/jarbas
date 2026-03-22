@@ -1,4 +1,0 @@
-{
-  "title": "Fix trigger paths in Telegram weather webhook",
-  "job": "No arquivo `app/api/telegram/weather/route.js`, corrija os caminhos dos triggers:\n- Substitua `/job/triggers/weather-bot.js` por `/app/triggers/weather-bot.js`\n- Substitua `/job/triggers/handle-telegram-weather.js` por `/app/triggers/handle-telegram-weather.js`\n\nFaça commit da mudança com mensagem \"fix: corrige caminhos dos triggers no webhook do Telegram\""
-}
