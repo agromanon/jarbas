@@ -29,6 +29,7 @@ const DATA_DIR = path.join(__dirname, '../data');
 const ALLOWED_USERS_FILE = path.join(DATA_DIR, 'allowed-users.json');
 const USER_LOCATIONS_FILE = path.join(DATA_DIR, 'user-locations.json');
 const USER_PREFERENCES_FILE = path.join(DATA_DIR, 'user-preferences.json');
+const PENDING_INPUT_FILE = path.join(DATA_DIR, 'pending-input.json');
 
 const WEATHER_BOT_TOKEN = process.env.WEATHER_BOT_TOKEN;
 const WEATHER_BOT_ADMIN_ID = parseInt(process.env.WEATHER_BOT_ADMIN_ID || '0');
@@ -125,6 +126,16 @@ async function handleMessage(message) {
   // Handle text commands
   if (!text) {
     return;
+  }
+
+  // Check for pending input (e.g., waiting for city name)
+  const pendingInput = getAndClearPendingInput(userId);
+  if (pendingInput) {
+    console.log(`Processing pending input for ${userId}: ${pendingInput.type}`);
+    if (pendingInput.type === 'city_name') {
+      await handleCityLocation(chatId, text);
+      return;
+    }
   }
 
   const command = text.toLowerCase();
@@ -434,6 +445,11 @@ async function handleIPLocation(chatId) {
  * Request city name from user
  */
 async function requestCityName(chatId) {
+  const userId = chatId;
+
+  // Set pending input state to track that we're waiting for a city name
+  setPendingInput(userId, 'city_name');
+
   const responseText = '✏️ Digite o nome da cidade:\n\nExemplo: São Paulo, Rio de Janeiro, Curitiba';
 
   await sendTelegramMessage(chatId, responseText, {
@@ -448,8 +464,15 @@ async function requestCityName(chatId) {
 /**
  * Handle city name input
  */
-async function handleCityLocation(chatId, command) {
-  const cityName = command.replace(/^city:/i, '').replace(/^cidade:/i, '').trim();
+async function handleCityLocation(chatId, input) {
+  let cityName = input;
+
+  // Check if input has the "city:" or "cidade:" prefix
+  if (cityName.startsWith('city:') || cityName.startsWith('cidade:')) {
+    cityName = cityName.replace(/^city:/i, '').replace(/^cidade:/i, '').trim();
+  }
+
+  cityName = cityName.trim();
 
   if (!cityName) {
     await sendTelegramMessage(chatId, '❌ Por favor, digite o nome da cidade.');
@@ -870,6 +893,56 @@ function saveUserLocation(userId, lat, lon, name) {
     fs.writeFileSync(USER_LOCATIONS_FILE, JSON.stringify(data, null, 2));
   } catch (error) {
     console.error('ERROR: Failed to save user location:', error.message);
+  }
+}
+
+/**
+ * Set pending input state for user
+ */
+function setPendingInput(userId, type) {
+  try {
+    ensureDataDir();
+    let data = {};
+    try {
+      const fileContent = fs.readFileSync(PENDING_INPUT_FILE, 'utf8');
+      data = JSON.parse(fileContent);
+    } catch (error) {
+      // File doesn't exist or is invalid, start fresh
+    }
+
+    data[userId] = {
+      type: type,
+      timestamp: Date.now()
+    };
+
+    fs.writeFileSync(PENDING_INPUT_FILE, JSON.stringify(data, null, 2));
+  } catch (error) {
+    console.error('ERROR: Failed to set pending input:', error.message);
+  }
+}
+
+/**
+ * Get and clear pending input state for user
+ */
+function getAndClearPendingInput(userId) {
+  try {
+    ensureDataDir();
+    let data = {};
+    try {
+      const fileContent = fs.readFileSync(PENDING_INPUT_FILE, 'utf8');
+      data = JSON.parse(fileContent);
+    } catch (error) {
+      return null;
+    }
+
+    const pending = data[userId] || null;
+    delete data[userId];
+    fs.writeFileSync(PENDING_INPUT_FILE, JSON.stringify(data, null, 2));
+
+    return pending;
+  } catch (error) {
+    console.error('ERROR: Failed to get pending input:', error.message);
+    return null;
   }
 }
 

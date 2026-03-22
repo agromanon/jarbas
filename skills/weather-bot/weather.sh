@@ -266,7 +266,8 @@ format_weather_message() {
             local emoji=$(get_weather_emoji "$rain_prob" "$rain_amount")
             local rain_amount_rounded=$(printf "%.1f" "$rain_amount")
 
-            message+="${emoji} ${hour_formatted}h00 - ${temp}°C Chuva: ${rain_prob}% 💧${rain_amount_rounded}mm\n"
+            message+="${emoji} *${hour_formatted}h00* - *${temp}°C*\n"
+            message+="   💧 Chuva: ${rain_prob}% • ${rain_amount_rounded}mm\n\n"
             has_data=true
         fi
     done
