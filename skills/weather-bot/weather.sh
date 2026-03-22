@@ -116,14 +116,18 @@ get_weather_emoji() {
     local rain_prob=$1
     local rain_amount=$2
 
-    if [ "$rain_prob" -ge 70 ]; then
+    # Convert to integer for comparison (bash doesn't handle floats)
+    local rain_prob_int=${rain_prob%.*}
+    local rain_amount_int=${rain_amount%.*}
+
+    if [ "$rain_prob_int" -ge 70 ]; then
         echo "🌧️"
-    elif [ "$rain_prob" -ge 40 ]; then
+    elif [ "$rain_prob_int" -ge 40 ]; then
         echo "🌦️"
-    elif [ "$rain_prob" -ge 20 ]; then
+    elif [ "$rain_prob_int" -ge 20 ]; then
         echo "⛅"
     else
-        if [ "$rain_amount" -gt 0 ]; then
+        if [ "$rain_amount_int" -gt 0 ]; then
             echo "🌦️"
         else
             echo "☀️"
