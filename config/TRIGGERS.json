@@ -19,7 +19,7 @@
     "name": "weather-bot",
     "watch_path": "/webhook/weather-bot",
     "actions": [
-      { "type": "command", "command": "node /job/triggers/weather-bot.js '{{body}}'" }
+      { "type": "command", "command": "node /app/triggers/weather-bot.js '{{body}}'" }
     ],
     "enabled": true
   },

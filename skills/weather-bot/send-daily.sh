@@ -7,7 +7,12 @@
 set -e
 
 # Configuration
-DATA_DIR="/job/data"
+# Use /app/data when running inside Docker container, /job/data for local development
+if [ -d "/app/data" ]; then
+    DATA_DIR="/app/data"
+else
+    DATA_DIR="/job/data"
+fi
 ALLOWED_USERS_FILE="${DATA_DIR}/allowed-users.json"
 USER_LOCATIONS_FILE="${DATA_DIR}/user-locations.json"
 WEATHER_BOT_TOKEN="${WEATHER_BOT_TOKEN}"
@@ -83,7 +88,13 @@ get_weather_forecast() {
     local lon="$3"
     local location_name="$4"
 
-    local script_path="/job/skills/weather-bot/weather.sh"
+    # Use /app/skills when running inside Docker container, /job/skills for local development
+    local script_path
+    if [ -f "/app/skills/weather-bot/weather.sh" ]; then
+        script_path="/app/skills/weather-bot/weather.sh"
+    else
+        script_path="/job/skills/weather-bot/weather.sh"
+    fi
     local output
 
     output=$("$script_path" "$type" "$lat" "$lon" "$location_name" 2>&1) || {
