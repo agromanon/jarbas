@@ -184,7 +184,7 @@ get_weather_emoji() {
 # Fetch weather data from Open-Meteo
 fetch_weather() {
     local forecast_days=$(get_forecast_days "$FORECAST_TYPE")
-    local url="https://api.open-meteo.com/v1/forecast?latitude=${LATITUDE}&longitude=${LONGITUDE}&hourly=temperature_2m,precipitation_probability,precipitation&forecast_days=${forecast_days}&timezone=${TIMEZONE}&models=best_match"
+    local url="https://api.open-meteo.com/v1/forecast?latitude=${LATITUDE}&longitude=${LONGITUDE}&hourly=temperature_2m,precipitation_probability,precipitation&daily=precipitation_sum,windspeed_10m_max&forecast_days=${forecast_days}&timezone=${TIMEZONE}&models=best_match"
 
     local response
     response=$(curl -s --fail --max-time 30 "$url" 2>&1) || {
@@ -229,6 +229,17 @@ format_weather_message() {
         error "No weather data received from API"
     fi
 
+    # Get daily rain and wind data for personalized phrase
+    local daily_rain=0
+    local daily_wind=0
+    if [ "$USE_JQ" = true ]; then
+        daily_rain=$(echo "$json" | jq -r '.daily.precipitation_sum[0] // 0' 2>/dev/null)
+        daily_wind=$(echo "$json" | jq -r '.daily.windspeed_10m_max[0] // 0' 2>/dev/null)
+    fi
+
+    # Get personalized phrase
+    local personalized_phrase=$(get_personalized_phrase "$daily_rain" "$daily_wind")
+
     # Build message header based on type
     local header_title="Previsão do Tempo"
     case "$FORECAST_TYPE" in
@@ -249,6 +260,11 @@ format_weather_message() {
     # Build message
     local message="🌤️ ${header_title} - ${LOCATION_NAME}\n"
     message+="───────────────\n\n"
+
+    # Add personalized phrase if available
+    if [ -n "$personalized_phrase" ]; then
+        message+="${personalized_phrase}\n\n"
+    fi
 
     if [ "$FORECAST_TYPE" = "today" ] || [ "$FORECAST_TYPE" = "tomorrow" ]; then
         local target_date=$(get_target_date "$FORECAST_TYPE")
