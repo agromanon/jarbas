@@ -206,12 +206,37 @@ async function handleCallbackQuery(callbackQuery) {
   // Acknowledge the callback query
   await answerCallbackQuery(callbackId);
 
-  // Check authorization for all callbacks except location-related and admin approval
-  // Admin approval callbacks (approve_user_, deny_user_) are handled by their own handlers
+  // IMPORTANT: Handle approve/deny user callbacks FIRST, before any authorization check
+  // These are admin-only actions and must verify admin status before checking authorization
+  if (data.startsWith('approve_user_')) {
+    // Verify admin FIRST
+    if (userId !== WEATHER_BOT_ADMIN_ID) {
+      await answerCallbackQuery(callbackId, '❌ Apenas o administrador pode autorizar usuários.');
+      await sendTelegramMessage(chatId, '🔒 *Acesso não autorizado*\n\nApenas o administrador pode autorizar usuários.', {
+        parse_mode: 'Markdown'
+      });
+      return;
+    }
+    await handleApproveUser(callbackQuery);
+    return;
+  }
+
+  if (data.startsWith('deny_user_')) {
+    // Verify admin FIRST
+    if (userId !== WEATHER_BOT_ADMIN_ID) {
+      await answerCallbackQuery(callbackId, '❌ Apenas o administrador pode negar acessos.');
+      await sendTelegramMessage(chatId, '🔒 *Acesso não autorizado*\n\nApenas o administrador pode negar acessos.', {
+        parse_mode: 'Markdown'
+      });
+      return;
+    }
+    await handleDenyUser(callbackQuery);
+    return;
+  }
+
+  // Check authorization for all other callbacks except location-related
   if (!data.startsWith('location_') &&
       !data.startsWith('loc_menu_') &&
-      !data.startsWith('approve_user_') &&
-      !data.startsWith('deny_user_') &&
       !isAuthorized(userId)) {
     await sendAuthorizationMessage(chatId, userId);
     return;
@@ -224,10 +249,6 @@ async function handleCallbackQuery(callbackQuery) {
     await showPartnerInfo(chatId);
   } else if (data === 'location_menu') {
     await showLocationMenu(chatId);
-  } else if (data.startsWith('approve_user_')) {
-    await handleApproveUser(callbackQuery);
-  } else if (data.startsWith('deny_user_')) {
-    await handleDenyUser(callbackQuery);
   } else if (data.startsWith('weather_')) {
     await handleWeatherForecast(chatId, data);
   } else if (data === 'location_gps') {
@@ -243,7 +264,7 @@ async function handleCallbackQuery(callbackQuery) {
   } else if (data === 'config_menu') {
     await showConfigMenu(chatId);
   } else if (data.startsWith('config_toggle_')) {
-    const hour = parseInt(data.replace('config_toggle_', ''));
+    const hour = data.replace('config_toggle_', '');
     if (await handleToggleHour(chatId, hour)) {
       await showConfigMenu(chatId);
     }
@@ -583,7 +604,7 @@ async function showConfigMenu(chatId) {
   const notifications = preferences.notifications || [];
 
   // Build inline keyboard with hour selection
-  const hours = [6, 8, 10, 12, 14, 16, 18];
+  const hours = ['6', '8', '10', '12', '14', '16', '18'];
 
   const replyMarkup = {
     inline_keyboard: []
@@ -594,7 +615,7 @@ async function showConfigMenu(chatId) {
     const row = [];
     for (let j = i; j < i + 3 && j < hours.length; j++) {
       const hour = hours[j];
-      const hourStr = hour.toString().padStart(2, '0') + ':00';
+      const hourStr = hour.padStart(2, '0') + ':00';
       const isSelected = notifications.includes(hour);
       const icon = isSelected ? '✅' : '⬜';
       row.push({
@@ -635,7 +656,10 @@ async function handleToggleHour(chatId, hour) {
   const preferences = getUserPreferences(chatId);
   let notifications = preferences.notifications || [];
 
-  const hourIndex = notifications.indexOf(hour);
+  // Ensure hour is a string for consistent comparison
+  const hourStr = String(hour);
+
+  const hourIndex = notifications.indexOf(hourStr);
 
   if (hourIndex === -1) {
     // Add hour if not selected (max 3)
@@ -643,8 +667,8 @@ async function handleToggleHour(chatId, hour) {
       await sendTelegramMessage(chatId, '⚠️ Você já selecionou 3 horários. Desmarque um para selecionar outro.');
       return false;
     }
-    notifications.push(hour);
-    notifications.sort((a, b) => a - b);
+    notifications.push(hourStr);
+    notifications.sort((a, b) => parseInt(a) - parseInt(b));
   } else {
     // Remove hour if already selected
     notifications.splice(hourIndex, 1);
@@ -668,7 +692,7 @@ async function handleSaveConfig(chatId) {
     return;
   }
 
-  const selectedHours = notifications.map(h => h.toString().padStart(2, '0') + 'h').join(', ');
+  const selectedHours = notifications.map(h => String(h).padStart(2, '0') + 'h').join(', ');
   await sendTelegramMessage(chatId, `✅ *Configuração salva!*\n\nVocê receberá previsões às: ${selectedHours}`, {
     parse_mode: 'Markdown'
   });
