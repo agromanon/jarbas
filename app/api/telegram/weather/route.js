@@ -70,7 +70,7 @@ async function forwardToWeatherHandler(update) {
           TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
           TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID
         },
-        timeout: 30000 // 30 second timeout
+        timeout: 20000 // 20 second timeout (reduced for faster fail)
       }
     );
 
@@ -102,7 +102,7 @@ async function forwardToWeatherBotHandler(update) {
           WEATHER_BOT_TOKEN: process.env.WEATHER_BOT_TOKEN,
           WEATHER_BOT_ADMIN_ID: process.env.WEATHER_BOT_ADMIN_ID
         },
-        timeout: 30000 // 30 second timeout
+        timeout: 20000 // 20 second timeout (reduced for faster fail)
       }
     );
 
@@ -192,8 +192,8 @@ export async function POST(request) {
       await forwardToWeatherHandler(update);
     }
 
-    // Always forward to thepopebot handler (for chat functionality, etc.)
-    await forwardToThpopebotHandler(update);
+    // Note: thepopebot handler forward is disabled for this standalone weather bot
+    // The /api/telegram/webhook endpoint does not exist in this deployment
 
     // Always return 200 OK to acknowledge the update
     return NextResponse.json({ ok: true });
