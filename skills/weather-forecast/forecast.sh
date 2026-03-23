@@ -108,7 +108,7 @@ get_target_date() {
             ;;
     esac
 
-    date -d "+${offset} days" '+%Y-%m-%d'
+    TZ="${TIMEZONE}" date -d "+${offset} days" '+%Y-%m-%d'
 }
 
 # Get end date for filtering (for multi-day forecasts)
@@ -122,7 +122,7 @@ get_end_date() {
             get_target_date "$type"
             ;;
         *)
-            date '+%Y-%m-%d'
+            TZ="${TIMEZONE}" date '+%Y-%m-%d'
             ;;
     esac
 }
@@ -239,7 +239,7 @@ format_weather_message() {
     done <<< "$rain_amounts"
 
     # Get date filtering parameters
-    local today_date=$(date '+%Y-%m-%d')
+    local today_date=$(TZ="${TIMEZONE}" date '+%Y-%m-%d')
     local current_hour=$(TZ="${TIMEZONE}" date '+%H' | sed 's/^0//')
 
     # For multi-day forecasts, start from today
@@ -251,10 +251,10 @@ format_weather_message() {
     fi
     local end_date=$(get_end_date "$FORECAST_TYPE")
 
-    # For today/morning/afternoon, filter by current hour
-    local filter_current_hour=false
-    if [ "$FORECAST_TYPE" = "today" ] || [ "$FORECAST_TYPE" = "morning" ] || [ "$FORECAST_TYPE" = "afternoon" ]; then
-        filter_current_hour=true
+    # For today, show all hours from current_hour onwards (not just 8-18)
+    local show_all_hours=false
+    if [ "$FORECAST_TYPE" = "today" ]; then
+        show_all_hours=true
     fi
 
     # Adjust hour range for morning/afternoon
@@ -290,12 +290,21 @@ format_weather_message() {
             fi
         fi
 
-        # Only include if within date range and within hour range
-        if [ "$within_date_range" = true ] && [ -n "$hour" ] && [ "$hour" -ge "$start_hour_filter" ] && [ "$hour" -le "$end_hour_filter" ]; then
-            # For today, also filter by current hour
-            if [ "$filter_current_hour" = true ] && [ "$date" = "$today_date" ] && [ "$hour" -lt "$current_hour" ]; then
-                continue
+        # Determine if this hour should be displayed
+        local display_hour=false
+        if [ "$show_all_hours" = true ] && [ "$date" = "$today_date" ]; then
+            # For today, show all hours from current_hour onwards
+            if [ "$hour" -ge "$current_hour" ]; then
+                display_hour=true
             fi
+        else
+            # For other days, show hours 8-18
+            if [ "$hour" -ge "$start_hour_filter" ] && [ "$hour" -le "$end_hour_filter" ]; then
+                display_hour=true
+            fi
+        fi
+
+        if [ "$within_date_range" = true ] && [ "$display_hour" = true ]; then
 
             # Add date separator for multi-day forecasts
             if [ "$date" != "$last_displayed_date" ] && [ "$date" != "$start_date" ]; then
