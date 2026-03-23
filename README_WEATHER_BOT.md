@@ -155,8 +155,8 @@ Se o usuário não configurou uma localização:
    - URL: `https://nominatim.openstreetmap.org/reverse`
    - Usado para: GPS e IP location
 
-2. **IP Geolocation (ip-api.com)**
-   - URL: `http://ip-api.com/json/`
+2. **IP Geolocation (ipinfo.io)**
+   - URL: `https://ipinfo.io/json`
    - Detecta localização baseada no IP do usuário
 
 3. **City Geocoding (Open-Meteo)**
@@ -298,9 +298,9 @@ O webhook recebe atualizações do Telegram e as passa para o handler.
 - **URL**: `https://nominatim.openstreetmap.org/reverse`
 - **Uso**: Obter nome do local a partir de coordenadas
 
-### ip-api.com (IP Geolocation)
+### ipinfo.io (IP Geolocation)
 
-- **URL**: `http://ip-api.com/json/`
+- **URL**: `https://ipinfo.io/json`
 - **Uso**: Detectar localização via IP do usuário
 
 ### Open-Meteo Geocoding API
