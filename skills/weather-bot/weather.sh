@@ -10,6 +10,52 @@
 #
 # Output format: JSON with "message" field containing the formatted forecast
 
+# Function to get personalized phrase based on weather conditions
+get_personalized_phrase() {
+    local rain_mm="$1"
+    local wind_kmh="$2"
+    local phrases_file="/app/data/weather-phrases.json"
+    
+    # Check if phrases file exists
+    if [ ! -f "$phrases_file" ]; then
+        echo ""
+        return
+    fi
+    
+    # Determine category based on conditions (priority: heavy_rain > light_rain > windy > perfect)
+    local category=""
+    local replace_value=""
+    
+    if (( $(echo "$rain_mm > 5" | bc -l) )); then
+        category="heavy_rain"
+        replace_value="$rain_mm"
+    elif (( $(echo "$rain_mm > 0" | bc -l) )); then
+        category="light_rain"
+        replace_value="$rain_mm"
+    elif (( $(echo "$wind_kmh > 20" | bc -l) )); then
+        category="windy"
+        replace_value="$wind_kmh"
+    else
+        category="perfect"
+        replace_value=""
+    fi
+    
+    # Get random phrase from category
+    local phrase=""
+    if command -v jq &> /dev/null; then
+        local array_length=$(jq ".${category} | length" "$phrases_file")
+        local random_index=$((RANDOM % array_length))
+        phrase=$(jq -r ".${category}[$random_index]" "$phrases_file")
+    fi
+    
+    # Replace [X] with actual value if needed
+    if [ -n "$replace_value" ] && [ -n "$phrase" ]; then
+        phrase="${phrase//\[X\]/$replace_value}"
+    fi
+    
+    echo "$phrase"
+}
+
 # Configuration
 TIMEZONE="America/Sao_Paulo"
 START_HOUR=8
