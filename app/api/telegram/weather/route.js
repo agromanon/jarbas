@@ -27,14 +27,8 @@ const execAsync = promisify(exec);
  */
 async function forwardToThpopebotHandler(update) {
   try {
-    // Import the thepopebot telegram handler
-    const telegramModule = await import('thepopebot/api');
-
-    // The thepopebot package exports handlers, but we need to call the telegram webhook
-    // This is a bit tricky since we can't directly import the internal handler
-    // Instead, we'll make a local fetch request to the internal endpoint
-
-    const baseUrl = process.env.APP_URL || 'http://localhost:3000';
+    // Use localhost for internal fetch to avoid issues with APP_URL pointing to external URL
+    const baseUrl = 'http://localhost:3000';
     const response = await fetch(`${baseUrl}/api/telegram/webhook`, {
       method: 'POST',
       headers: {
@@ -63,7 +57,7 @@ async function forwardToWeatherHandler(update) {
     const updateJson = JSON.stringify(update).replace(/'/g, "'\"'\"'");
 
     const { stdout, stderr } = await execAsync(
-      `node /job/triggers/handle-telegram-weather.js '${updateJson}'`,
+      `node ${process.cwd()}/triggers/handle-telegram-weather.js '${updateJson}'`,
       {
         env: {
           ...process.env,
@@ -95,7 +89,7 @@ async function forwardToWeatherBotHandler(update) {
     const updateJson = JSON.stringify(update).replace(/'/g, "'\"'\"'");
 
     const { stdout, stderr } = await execAsync(
-      `node /job/triggers/weather-bot.js '${updateJson}'`,
+      `node ${process.cwd()}/triggers/weather-bot.js '${updateJson}'`,
       {
         env: {
           ...process.env,
