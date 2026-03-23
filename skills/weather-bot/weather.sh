@@ -184,7 +184,7 @@ get_weather_emoji() {
 # Fetch weather data from Open-Meteo
 fetch_weather() {
     local forecast_days=$(get_forecast_days "$FORECAST_TYPE")
-    local url="https://api.open-meteo.com/v1/forecast?latitude=${LATITUDE}&longitude=${LONGITUDE}&hourly=temperature_2m,precipitation_probability,precipitation&daily=precipitation_sum,windspeed_10m_max&forecast_days=${forecast_days}&timezone=${TIMEZONE}&models=best_match"
+    local url="https://api.open-meteo.com/v1/forecast?latitude=${LATITUDE}&longitude=${LONGITUDE}&hourly=temperature_2m,precipitation_probability,precipitation,windspeed_10m&daily=precipitation_sum,windspeed_10m_max&forecast_days=${forecast_days}&timezone=${TIMEZONE}&models=best_match"
 
     local response
     response=$(curl -s --fail --max-time 30 "$url" 2>&1) || {
@@ -202,6 +202,7 @@ format_weather_message() {
     local temperatures=""
     local rain_probs=""
     local rain_amounts=""
+    local wind_speeds=""
 
     # Try jq first, fallback to grep/sed if jq fails
     if [ "$USE_JQ" = true ]; then
@@ -209,6 +210,7 @@ format_weather_message() {
         temperatures=$(echo "$json" | jq -r '.hourly.temperature_2m[]' 2>/dev/null)
         rain_probs=$(echo "$json" | jq -r '.hourly.precipitation_probability[]' 2>/dev/null)
         rain_amounts=$(echo "$json" | jq -r '.hourly.precipitation[]' 2>/dev/null)
+        wind_speeds=$(echo "$json" | jq -r '.hourly.windspeed_10m[]' 2>/dev/null)
 
         # If jq failed, fallback to grep/sed
         if [ -z "$times" ]; then
@@ -217,12 +219,14 @@ format_weather_message() {
             temperatures=$(echo "$json" | grep -o '"temperature_2m":[0-9.-]*' | sed 's/"temperature_2m"://')
             rain_probs=$(echo "$json" | grep -o '"precipitation_probability":[0-9]*' | sed 's/"precipitation_probability"://')
             rain_amounts=$(echo "$json" | grep -o '"precipitation":[0-9.]*' | sed 's/"precipitation"://')
+            wind_speeds=$(echo "$json" | grep -o '"windspeed_10m":[0-9.]*' | sed 's/"windspeed_10m"://')
         fi
     else
         times=$(echo "$json" | grep -o '"time":"[^"]*"' | sed 's/"time":"//;s/"$//')
         temperatures=$(echo "$json" | grep -o '"temperature_2m":[0-9.-]*' | sed 's/"temperature_2m"://')
         rain_probs=$(echo "$json" | grep -o '"precipitation_probability":[0-9]*' | sed 's/"precipitation_probability"://')
         rain_amounts=$(echo "$json" | grep -o '"precipitation":[0-9.]*' | sed 's/"precipitation"://')
+        wind_speeds=$(echo "$json" | grep -o '"windspeed_10m":[0-9.]*' | sed 's/"windspeed_10m"://')
     fi
 
     if [ -z "$times" ]; then
@@ -280,6 +284,7 @@ format_weather_message() {
     local temp_array=()
     local rain_prob_array=()
     local rain_amount_array=()
+    local wind_speed_array=()
 
     while IFS= read -r time; do
         time_array+=("$time")
@@ -296,6 +301,10 @@ format_weather_message() {
     while IFS= read -r rain_amount; do
         rain_amount_array+=("$rain_amount")
     done <<< "$rain_amounts"
+
+    while IFS= read -r wind_speed; do
+        wind_speed_array+=("$wind_speed")
+    done <<< "$wind_speeds"
 
     # Get date filtering parameters
     local today_date=$(TZ="${TIMEZONE}" date '+%Y-%m-%d')
@@ -328,6 +337,7 @@ format_weather_message() {
         local temp="${temp_array[$i]}"
         local rain_prob="${rain_prob_array[$i]}"
         local rain_amount="${rain_amount_array[$i]}"
+        local wind_speed="${wind_speed_array[$i]}"
 
         local date=$(echo "$time" | grep -oP '^[0-9]{4}-[0-9]{2}-[0-9]{2}')
         local hour=$(echo "$time" | grep -oP 'T\K[0-9]{2}' | sed 's/^0//')
@@ -347,7 +357,7 @@ format_weather_message() {
                 display_hour=true
             fi
         else
-            # For other days, show hours 8-18
+            # For other days, show hours START_HOUR to END_HOUR
             if [ "$hour" -ge "$START_HOUR" ] && [ "$hour" -le "$END_HOUR" ]; then
                 display_hour=true
             fi
@@ -363,9 +373,11 @@ format_weather_message() {
             local hour_formatted=$(printf "%02d" "$hour")
             local emoji=$(get_weather_emoji "$rain_prob" "$rain_amount")
             local rain_amount_rounded=$(printf "%.1f" "$rain_amount")
+            local wind_speed_rounded=$(printf "%.0f" "$wind_speed")
 
             message+="${emoji} *${hour_formatted}h00* - *${temp}°C*\n"
-            message+="   💧 Chuva: ${rain_prob}% • ${rain_amount_rounded}mm\n\n"
+            message+="   💧 Chuva: ${rain_prob}% • ${rain_amount_rounded}mm\n"
+            message+="   🌀 Vento: ${wind_speed_rounded} km/h\n\n"
             has_data=true
         fi
     done
