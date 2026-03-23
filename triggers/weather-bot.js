@@ -206,8 +206,13 @@ async function handleCallbackQuery(callbackQuery) {
   // Acknowledge the callback query
   await answerCallbackQuery(callbackId);
 
-  // Check authorization for all callbacks except location-related
-  if (!data.startsWith('location_') && !data.startsWith('loc_menu_') && !isAuthorized(userId)) {
+  // Check authorization for all callbacks except location-related and admin approval
+  // Admin approval callbacks (approve_user_, deny_user_) are handled by their own handlers
+  if (!data.startsWith('location_') &&
+      !data.startsWith('loc_menu_') &&
+      !data.startsWith('approve_user_') &&
+      !data.startsWith('deny_user_') &&
+      !isAuthorized(userId)) {
     await sendAuthorizationMessage(chatId, userId);
     return;
   }
@@ -1412,8 +1417,9 @@ function getWeatherForecast(type, lat, lon, locationName) {
           reject(new Error('Forecast JSON missing message field'));
           return;
         }
-        // Convert escaped newlines (\n) to actual newline characters
-        const message = result.message.replace(/\\n/g, '\n');
+        // JSON.parse already converts \n escapes to actual newlines
+        // No need for additional replacement
+        const message = result.message;
         console.log(`Forecast message generated, length: ${message.length}`);
         resolve(message);
       } catch (error) {

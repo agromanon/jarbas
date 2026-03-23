@@ -178,14 +178,16 @@ get_weather_forecast() {
     }
 
     # Return the message field from JSON
-    # The JSON has escaped newlines (\\n), which jq converts to actual newlines
+    # jq -r properly converts JSON \n escapes to actual newlines
     if command -v jq &> /dev/null; then
         echo "$output" | jq -r '.message'
     else
-        # Manual JSON parsing: extract message field and convert \\n to actual newlines
+        # Manual JSON parsing: extract message field
+        # The sed command converts \n (two chars: backslash + n) to actual newlines
         echo "$output" | grep -o '"message":"[^"]*"' | \
             sed 's/"message":"//;s/"$//' | \
-            sed 's/\\n/\n/g'
+            sed 's/\\n/\
+/g'
     fi
 }
 
