@@ -134,7 +134,7 @@ async function handleMessage(message) {
   // This prevents commands like /start from being treated as city names
   switch (command) {
     case '/start':
-      await handleStart(chatId);
+      await handleStart(chatId, message);
       return;
     case '/menu':
     case 'menu':
@@ -219,6 +219,10 @@ async function handleCallbackQuery(callbackQuery) {
     await showPartnerInfo(chatId);
   } else if (data === 'location_menu') {
     await showLocationMenu(chatId);
+  } else if (data.startsWith('approve_user_')) {
+    await handleApproveUser(callbackQuery);
+  } else if (data.startsWith('deny_user_')) {
+    await handleDenyUser(callbackQuery);
   } else if (data.startsWith('weather_')) {
     await handleWeatherForecast(chatId, data);
   } else if (data === 'location_gps') {
@@ -248,8 +252,12 @@ async function handleCallbackQuery(callbackQuery) {
 /**
  * Handle /start command
  */
-async function handleStart(chatId) {
-  const userId = chatId; // Assume chatId is userId for now
+async function handleStart(chatId, message) {
+  const userId = message.from?.id || chatId;
+  const userName = message.from?.first_name || 'Usuário';
+  const userLastName = message.from?.last_name || '';
+  const userUsername = message.from?.username ? `@${message.from.username}` : 'Não definido';
+  const fullName = userLastName ? `${userName} ${userLastName}` : userName;
 
   let welcomeMessage = `🌤️ *Bem-vindo ao Perninhasclimabot!*
 
@@ -271,13 +279,48 @@ Sou seu assistente de previsão do tempo.
       parse_mode: 'Markdown'
     });
   } else {
-    welcomeMessage += `Você ainda não está autorizado a usar este bot.\n\n`;
-    welcomeMessage += `Por favor, entre em contato com o administrador para solicitar acesso.\n\n`;
-    welcomeMessage += `Seu ID de usuário: \`${userId}\``;
+    // Check if user is already in pending list
+    const pendingUsers = getPendingUsers();
+    
+    if (pendingUsers.includes(userId)) {
+      // User already requested access
+      await sendTelegramMessage(chatId, `⏳ *Aguarde...*\n\nVocê já solicitou acesso. Seu pedido está sendo analisado pelo administrador.\n\nVocê será notificado em breve.`, {
+        parse_mode: 'Markdown'
+      });
+    } else {
+      // New user requesting access
+      // 1. Tell user to wait
+      await sendTelegramMessage(chatId, `⏳ *Aguarde...*\n\nSeu acesso está sendo processado. Você será notificado em breve.`, {
+        parse_mode: 'Markdown'
+      });
 
-    await sendTelegramMessage(chatId, welcomeMessage, {
-      parse_mode: 'Markdown'
-    });
+      // 2. Add user to pending list
+      addPendingUser(userId);
+
+      // 3. Send notification to admin with inline buttons
+      const adminMessage = `🔔 *Novo usuário solicitando acesso:*
+
+👤 *Nome:* ${fullName}
+🆔 *User ID:* \`${userId}\`
+📛 *Username:* ${userUsername}
+
+Deseja autorizar?`;
+
+      try {
+        await sendTelegramMessage(WEATHER_BOT_ADMIN_ID, adminMessage, {
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [[
+              { text: '✅ Autorizar', callback_data: `approve_user_${userId}` },
+              { text: '❌ Recusar', callback_data: `deny_user_${userId}` }
+            ]]
+          }
+        });
+        console.log(`✓ Access request notification sent to admin for user ${userId}`);
+      } catch (error) {
+        console.error('ERROR: Failed to send admin notification:', error.message);
+      }
+    }
   }
 }
 
@@ -833,6 +876,115 @@ async function handleListUsers(chatId) {
 }
 
 /**
+ * Handle approve user callback (admin only)
+ */
+async function handleApproveUser(callbackQuery) {
+  const adminId = callbackQuery.from?.id || callbackQuery.message.chat.id;
+  const data = callbackQuery.data;
+  const userId = parseInt(data.replace('approve_user_', ''));
+  const callbackId = callbackQuery.id;
+
+  // Verify admin
+  if (adminId !== WEATHER_BOT_ADMIN_ID) {
+    await answerCallbackQuery(callbackId, '❌ Apenas o administrador pode autorizar usuários.');
+    return;
+  }
+
+  try {
+    // Add user to authorized list
+    const allowedUsers = getAllowedUsers();
+    
+    if (allowedUsers.includes(userId)) {
+      await answerCallbackQuery(callbackId, '⚠️ Usuário já está autorizado.');
+      return;
+    }
+
+    allowedUsers.push(userId);
+    saveAllowedUsers(allowedUsers);
+
+    // Remove from pending list
+    removePendingUser(userId);
+
+    // Get user info from the original message if possible
+    const originalMessage = callbackQuery.message.text || '';
+    const nameMatch = originalMessage.match(/\*Nome:\*\s*(.+)/);
+    const userName = nameMatch ? nameMatch[1].replace(/\*/g, '') : `ID ${userId}`;
+
+    // Respond to admin
+    await answerCallbackQuery(callbackId, `✅ Usuário autorizado com sucesso!`);
+
+    // Update admin's message to show action taken
+    await sendTelegramMessage(WEATHER_BOT_ADMIN_ID, `✅ *Usuário autorizado!*\n\n👤 ${userName}\n🆔 \`${userId}\`\n\nO usuário foi notificado.`, {
+      parse_mode: 'Markdown'
+    });
+
+    // Notify the user
+    try {
+      await sendTelegramMessage(userId, `🎉 *Você foi autorizado!*\n\nBem-vindo ao Perninhas Clima Bot!\n\nEnvie /start para começar.`, {
+        parse_mode: 'Markdown'
+      });
+    } catch (notifyError) {
+      console.error('ERROR: Failed to notify user:', notifyError.message);
+      await sendTelegramMessage(WEATHER_BOT_ADMIN_ID, `⚠️ Não foi possível notificar o usuário (ele pode ter bloqueado o bot).`);
+    }
+
+    console.log(`✓ User ${userId} authorized by admin ${adminId}`);
+  } catch (error) {
+    console.error('ERROR: Failed to authorize user:', error.message);
+    await answerCallbackQuery(callbackId, '❌ Erro ao autorizar usuário.');
+  }
+}
+
+/**
+ * Handle deny user callback (admin only)
+ */
+async function handleDenyUser(callbackQuery) {
+  const adminId = callbackQuery.from?.id || callbackQuery.message.chat.id;
+  const data = callbackQuery.data;
+  const userId = parseInt(data.replace('deny_user_', ''));
+  const callbackId = callbackQuery.id;
+
+  // Verify admin
+  if (adminId !== WEATHER_BOT_ADMIN_ID) {
+    await answerCallbackQuery(callbackId, '❌ Apenas o administrador pode negar acessos.');
+    return;
+  }
+
+  try {
+    // Remove from pending list
+    removePendingUser(userId);
+
+    // Get user info from the original message if possible
+    const originalMessage = callbackQuery.message.text || '';
+    const nameMatch = originalMessage.match(/\*Nome:\*\s*(.+)/);
+    const userName = nameMatch ? nameMatch[1].replace(/\*/g, '') : `ID ${userId}`;
+
+    // Respond to admin
+    await answerCallbackQuery(callbackId, `❌ Acesso negado.`);
+
+    // Update admin's message to show action taken
+    await sendTelegramMessage(WEATHER_BOT_ADMIN_ID, `❌ *Acesso negado*\n\n👤 ${userName}\n🆔 \`${userId}\`\n\nO usuário foi notificado.`, {
+      parse_mode: 'Markdown'
+    });
+
+    // Notify the user
+    try {
+      await sendTelegramMessage(userId, `😔 *Infelizmente seu acesso foi negado.*\n\nEntre em contato com o administrador se acredita que isso foi um erro.`, {
+        parse_mode: 'Markdown'
+      });
+    } catch (notifyError) {
+      console.error('ERROR: Failed to notify user:', notifyError.message);
+      await sendTelegramMessage(WEATHER_BOT_ADMIN_ID, `⚠️ Não foi possível notificar o usuário (ele pode ter bloqueado o bot).`);
+    }
+
+    console.log(`✓ User ${userId} denied by admin ${adminId}`);
+  } catch (error) {
+    console.error('ERROR: Failed to deny user:', error.message);
+    await answerCallbackQuery(callbackId, '❌ Erro ao negar acesso.');
+  }
+}
+
+/**
  * Check if a user is authorized
  */
 function isAuthorized(userId) {
@@ -885,7 +1037,7 @@ function getAllowedUsers() {
   try {
     const data = fs.readFileSync(ALLOWED_USERS_FILE, 'utf8');
     const json = JSON.parse(data);
-    return json.allowed_users || [];
+    return json.authorized || json.allowed_users || [];
   } catch (error) {
     console.error('ERROR: Failed to read allowed users:', error.message);
     // Create default file with admin user
@@ -900,13 +1052,101 @@ function getAllowedUsers() {
 function saveAllowedUsers(users) {
   try {
     ensureDataDir();
+    
+    // Read existing data to preserve pending users
+    let existingData = { authorized: [], pending: [] };
+    try {
+      const fileContent = fs.readFileSync(ALLOWED_USERS_FILE, 'utf8');
+      existingData = JSON.parse(fileContent);
+    } catch (error) {
+      // File doesn't exist or is invalid, start fresh
+    }
+
     const data = {
       admin: WEATHER_BOT_ADMIN_ID,
-      allowed_users: users
+      authorized: users,
+      pending: existingData.pending || []
     };
     fs.writeFileSync(ALLOWED_USERS_FILE, JSON.stringify(data, null, 2));
   } catch (error) {
     console.error('ERROR: Failed to save allowed users:', error.message);
+  }
+}
+
+/**
+ * Get list of pending users
+ */
+function getPendingUsers() {
+  try {
+    const data = fs.readFileSync(ALLOWED_USERS_FILE, 'utf8');
+    const json = JSON.parse(data);
+    return json.pending || [];
+  } catch (error) {
+    console.error('ERROR: Failed to read pending users:', error.message);
+    return [];
+  }
+}
+
+/**
+ * Add user to pending list
+ */
+function addPendingUser(userId) {
+  try {
+    ensureDataDir();
+    
+    // Read existing data
+    let data = { admin: WEATHER_BOT_ADMIN_ID, authorized: [WEATHER_BOT_ADMIN_ID], pending: [] };
+    try {
+      const fileContent = fs.readFileSync(ALLOWED_USERS_FILE, 'utf8');
+      data = JSON.parse(fileContent);
+    } catch (error) {
+      // File doesn't exist or is invalid, start fresh
+    }
+
+    // Initialize arrays if they don't exist
+    if (!data.authorized) data.authorized = [];
+    if (!data.pending) data.pending = [];
+
+    // Add user to pending if not already there
+    if (!data.pending.includes(userId)) {
+      data.pending.push(userId);
+      fs.writeFileSync(ALLOWED_USERS_FILE, JSON.stringify(data, null, 2));
+      console.log(`✓ User ${userId} added to pending list`);
+    }
+  } catch (error) {
+    console.error('ERROR: Failed to add pending user:', error.message);
+  }
+}
+
+/**
+ * Remove user from pending list
+ */
+function removePendingUser(userId) {
+  try {
+    ensureDataDir();
+    
+    // Read existing data
+    let data = { admin: WEATHER_BOT_ADMIN_ID, authorized: [WEATHER_BOT_ADMIN_ID], pending: [] };
+    try {
+      const fileContent = fs.readFileSync(ALLOWED_USERS_FILE, 'utf8');
+      data = JSON.parse(fileContent);
+    } catch (error) {
+      // File doesn't exist or is invalid, nothing to remove
+      return;
+    }
+
+    // Initialize arrays if they don't exist
+    if (!data.pending) data.pending = [];
+
+    // Remove user from pending
+    const index = data.pending.indexOf(userId);
+    if (index !== -1) {
+      data.pending.splice(index, 1);
+      fs.writeFileSync(ALLOWED_USERS_FILE, JSON.stringify(data, null, 2));
+      console.log(`✓ User ${userId} removed from pending list`);
+    }
+  } catch (error) {
+    console.error('ERROR: Failed to remove pending user:', error.message);
   }
 }
 
