@@ -70,52 +70,52 @@
     "comment": "Disabled - use weather-bot scheduled forecasts instead (weather-06h, weather-12h, etc.)"
   },
   {
-    "name": "weather-06h",
+    "name": "weather-6h",
     "schedule": "0 6 * * *",
     "type": "command",
-    "command": "/app/skills/weather-bot/send-scheduled.sh 6",
+    "command": "bash /app/skills/weather-bot/send-scheduled.sh 6",
     "enabled": true
   },
   {
-    "name": "weather-08h",
+    "name": "weather-8h",
     "schedule": "0 8 * * *",
     "type": "command",
-    "command": "/app/skills/weather-bot/send-scheduled.sh 8",
+    "command": "bash /app/skills/weather-bot/send-scheduled.sh 8",
     "enabled": true
   },
   {
     "name": "weather-10h",
     "schedule": "0 10 * * *",
     "type": "command",
-    "command": "/app/skills/weather-bot/send-scheduled.sh 10",
+    "command": "bash /app/skills/weather-bot/send-scheduled.sh 10",
     "enabled": true
   },
   {
     "name": "weather-12h",
     "schedule": "0 12 * * *",
     "type": "command",
-    "command": "/app/skills/weather-bot/send-scheduled.sh 12",
+    "command": "bash /app/skills/weather-bot/send-scheduled.sh 12",
     "enabled": true
   },
   {
     "name": "weather-14h",
     "schedule": "0 14 * * *",
     "type": "command",
-    "command": "/app/skills/weather-bot/send-scheduled.sh 14",
+    "command": "bash /app/skills/weather-bot/send-scheduled.sh 14",
     "enabled": true
   },
   {
     "name": "weather-16h",
     "schedule": "0 16 * * *",
     "type": "command",
-    "command": "/app/skills/weather-bot/send-scheduled.sh 16",
+    "command": "bash /app/skills/weather-bot/send-scheduled.sh 16",
     "enabled": true
   },
   {
     "name": "weather-18h",
     "schedule": "0 18 * * *",
     "type": "command",
-    "command": "/app/skills/weather-bot/send-scheduled.sh 18",
+    "command": "bash /app/skills/weather-bot/send-scheduled.sh 18",
     "enabled": true
   }
 ]
