@@ -8,7 +8,7 @@ A dedicated Telegram bot for weather forecasts with user authorization and locat
 - **Multiple forecast periods**: Today, Tomorrow, Next 3 days, Next 7 days
 - **User authorization system**: Admin-controlled access to the bot
 - **Location management**: Users can set their own location via GPS, IP geolocation, or manual entry
-- **Scheduled forecasts**: Automatic weather updates sent at configurable times
+- **Scheduled forecasts**: Automatic weather updates sent at configurable times via CRONS.json
 - **Timezone-aware**: Filters forecast hours based on America/Sao_Paulo timezone
 
 ## Bot Commands
@@ -17,44 +17,83 @@ A dedicated Telegram bot for weather forecasts with user authorization and locat
 - `/start` - Show welcome message and menu
 - `/menu` - Show weather forecast menu
 - `/location` - Change your location
+- `/help` - Show help message
 
 ### Admin Commands
 - `/allow <chat_id>` - Authorize a user to access the bot
 - `/disallow <chat_id>` - Remove user authorization
 - `/listusers` - List all authorized users
-- `/help` - Show help message
 
 ## Configuration
 
 ### Environment Variables
 - `WEATHER_BOT_TOKEN` - Telegram bot token (required)
 - `WEATHER_BOT_ADMIN_ID` - Telegram chat ID of the admin (required)
-- `WEATHER_BOT_WEBHOOK_SECRET` - Secret for webhook validation (optional)
 
-### Data Files
-- `data/allowed-users.json` - Authorization database
-- `data/user-locations.json` - User location preferences
+### Data Files (stored in `data/` directory)
+- `allowed-users.json` - Authorization database with admin ID, authorized users, and pending requests
+- `user-locations.json` - User location preferences (lat, lon, name)
+- `user-preferences.json` - User notification preferences (hours to receive forecasts)
+- `pending-input.json` - Temporary state for multi-step inputs (e.g., waiting for city name)
 
 ## Scripts
 
 ### weather.sh
-Main weather forecast script with functions:
-- `get_forecast_today()` - Today's forecast (hours >= current time)
-- `get_forecast_tomorrow()` - Tomorrow's full forecast
-- `get_forecast_3days()` - Next 3 days
-- `get_forecast_7days()` - Next 7 days
+Main weather forecast script. Fetches data from Open-Meteo API and outputs formatted JSON.
 
 Usage:
 ```bash
-skills/weather-bot/weather.sh <type> <chat_id>
+skills/weather-bot/weather.sh <type> <lat> <lon> <location_name>
 ```
 
 Parameters:
 - `type`: today, tomorrow, 3days, or 7days
-- `chat_id`: Telegram chat ID to send forecast to
+- `lat`: latitude (e.g., -23.55)
+- `lon`: longitude (e.g., -46.70)
+- `location_name`: human-readable location name
 
-### send-daily.sh
-Script for scheduled forecasts. Sends today's forecast to all authorized users at their configured locations.
+Output: JSON with `message` field containing formatted forecast
+
+### send-scheduled.sh
+Sends forecasts to users who have configured notifications for a specific hour. Used by cron jobs.
+
+Usage:
+```bash
+skills/weather-bot/send-scheduled.sh <hour>
+```
+
+Parameters:
+- `hour`: 6, 8, 10, 12, 14, 16, or 18
+
+This script:
+1. Reads authorized users from `data/allowed-users.json`
+2. Checks each user's notification preferences from `data/user-preferences.json`
+3. Gets location from `data/user-locations.json`
+4. Sends forecast only to users who have that hour configured
+
+### init-data.sh
+Initializes data files with default values if they don't exist. Run this once during setup.
+
+Usage:
+```bash
+skills/weather-bot/init-data.sh
+```
+
+## Scheduled Forecasts (Cron Jobs)
+
+Add these entries to `config/CRONS.json` to enable automatic forecasts:
+
+```json
+{
+  "name": "weather-06h",
+  "schedule": "0 6 * * *",
+  "type": "command",
+  "command": "/app/skills/weather-bot/send-scheduled.sh 6",
+  "enabled": true
+}
+```
+
+Users configure their preferred hours via the bot menu ("⚙️ Configurar horários").
 
 ## Location Management
 
@@ -71,23 +110,34 @@ Default location (if not set):
 
 ## Setup
 
-1. Create symlink to activate skill:
+1. Activate skill (create symlink):
    ```bash
    ln -s ../weather-bot skills/active/weather-bot
    ```
 
-2. Configure webhook (automatically via setup script or manually):
+2. Initialize data files:
+   ```bash
+   WEATHER_BOT_ADMIN_ID=your_telegram_id skills/weather-bot/init-data.sh
+   ```
+
+3. Configure environment variables in `.env`:
+   ```
+   WEATHER_BOT_TOKEN=your_bot_token
+   WEATHER_BOT_ADMIN_ID=your_telegram_id
+   ```
+
+4. Set up Telegram webhook:
    ```bash
    curl -X POST "https://api.telegram.org/bot<WEATHER_BOT_TOKEN>/setWebhook" \
      -H "Content-Type: application/json" \
-     -d '{"url": "<APP_URL>/api/telegram/weather-bot"}'
+     -d '{"url": "<APP_URL>/api/telegram/weather"}'
    ```
 
-3. Add cron jobs to CRONS.json for scheduled forecasts (optional)
+5. Add cron jobs to `config/CRONS.json` for scheduled forecasts
 
 ## API Usage
 
-The weather.sh script outputs JSON format when called:
+The weather.sh script outputs JSON format:
 ```json
 {
   "message": "Formatted weather forecast text"

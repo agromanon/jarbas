@@ -1,6 +1,6 @@
 #!/bin/bash
 # Setup script for Weather Bot Telegram Webhook
-# This script configures your weather bot to use the webhook
+# This script configures your weather bot webhook and initializes data files
 
 # Check if WEATHER_BOT_TOKEN is set
 if [ -z "$WEATHER_BOT_TOKEN" ]; then
@@ -16,20 +16,29 @@ if [ -z "$APP_URL" ]; then
     exit 1
 fi
 
-# Build the webhook URL
-WEBHOOK_URL="${APP_URL}/api/webhook/weather-bot"
+# Build the webhook URL (using /api/telegram/weather which handles both bots)
+WEBHOOK_URL="${APP_URL}/api/telegram/weather"
 
 echo "=========================================="
-echo "Weather Bot - Telegram Webhook Setup"
+echo "Weather Bot - Telegram Setup"
 echo "=========================================="
 echo ""
 echo "Bot Token: ${WEATHER_BOT_TOKEN:0:10}..."
 echo "Webhook URL: ${WEBHOOK_URL}"
 echo ""
-echo "Configuring webhook..."
+
+# Initialize data files
+echo "Step 1: Initializing data files..."
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -f "${SCRIPT_DIR}/skills/weather-bot/init-data.sh" ]; then
+    bash "${SCRIPT_DIR}/skills/weather-bot/init-data.sh"
+else
+    echo "⚠️ init-data.sh not found, skipping data initialization"
+fi
 echo ""
 
 # Set the webhook
+echo "Step 2: Configuring Telegram webhook..."
 RESPONSE=$(curl -s -X POST \
     "https://api.telegram.org/bot${WEATHER_BOT_TOKEN}/setWebhook" \
     -H "Content-Type: application/json" \
@@ -55,7 +64,7 @@ if echo "$RESPONSE" | grep -q '"ok":true'; then
     echo "  /listusers         - List authorized users"
     echo ""
     echo "=========================================="
-    echo "Admin ID: 5121600266"
+    echo "Setup complete!"
     echo "=========================================="
 else
     echo "ERROR: Failed to set Telegram webhook"
