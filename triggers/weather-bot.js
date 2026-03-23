@@ -185,6 +185,10 @@ async function handleMessage(message) {
     if (pendingInput.type === 'city_name') {
       await handleCityLocation(chatId, text);
       return;
+    } else if (pendingInput.type === 'onboarding_city_name') {
+      // Handle city name for onboarding
+      await handleCityLocation(chatId, text);
+      return;
     }
   }
 
@@ -234,9 +238,10 @@ async function handleCallbackQuery(callbackQuery) {
     return;
   }
 
-  // Check authorization for all other callbacks except location-related
+  // Check authorization for all other callbacks except location-related and onboarding
   if (!data.startsWith('location_') &&
       !data.startsWith('loc_menu_') &&
+      !data.startsWith('onboard_') &&
       !isAuthorized(userId)) {
     await sendAuthorizationMessage(chatId, userId);
     return;
@@ -273,6 +278,14 @@ async function handleCallbackQuery(callbackQuery) {
   } else if (data === 'config_clear') {
     await handleClearConfig(chatId);
   }
+  // ONBOARDING CALLBACKS - Added for onboarding flow
+  else if (data === 'onboard_location_gps') {
+    await requestLocationForOnboarding(chatId, userId);
+  } else if (data === 'onboard_location_ip') {
+    await handleIPLocationForOnboarding(chatId, userId);
+  } else if (data === 'onboard_location_manual') {
+    await requestCityNameForOnboarding(chatId, userId);
+  }
 }
 
 /**
@@ -285,26 +298,8 @@ async function handleStart(chatId, message) {
   const userUsername = message.from?.username ? `@${message.from.username}` : 'Não definido';
   const fullName = userLastName ? `${userName} ${userLastName}` : userName;
 
-  let welcomeMessage = `🌤️ *Bem-vindo ao Perninhasclimabot!*
-
-Sou seu assistente de previsão do tempo.
-
-`;
-
-  if (isAuthorized(userId)) {
-    const location = getUserLocation(userId);
-    welcomeMessage += `Você está autorizado a usar o bot.\n\nSua localização atual: ${location.name}\n\n`;
-    welcomeMessage += `Use o botão abaixo para ver o menu de previsão:`;
-
-    await sendTelegramMessage(chatId, welcomeMessage, {
-      reply_markup: {
-        inline_keyboard: [[
-          { text: '📅 Ver Previsão', callback_data: 'menu' }
-        ]]
-      },
-      parse_mode: 'Markdown'
-    });
-  } else {
+  // Check if user is authorized
+  if (!isAuthorized(userId)) {
     // Check if user is already in pending list
     const pendingUsers = getPendingUsers();
     
@@ -347,7 +342,177 @@ Deseja autorizar?`;
         console.error('ERROR: Failed to send admin notification:', error.message);
       }
     }
+    return;
   }
+
+  // User is authorized - check if onboarding is complete
+  const preferences = getUserPreferences(userId);
+  const onboardingComplete = preferences.onboarding_complete || false;
+
+  if (!onboardingComplete) {
+    // Show onboarding wizard
+    await showOnboardingWizard(chatId, userId, userName);
+    return;
+  }
+
+  // User is authorized and onboarded - show welcome message
+  let welcomeMessage = `🌤️ *Bem-vindo ao Perninhasclimabot!*
+
+Sou seu assistente de previsão do tempo.
+
+Você está autorizado a usar o bot.
+
+Sua localização atual: ${getUserLocation(userId).name}
+
+Use o botão abaixo para ver o menu de previsão:`;
+
+  await sendTelegramMessage(chatId, welcomeMessage, {
+    reply_markup: {
+      inline_keyboard: [[
+        { text: '📅 Ver Previsão', callback_data: 'menu' }
+      ]]
+    },
+    parse_mode: 'Markdown'
+  });
+}
+
+/**
+ * Show onboarding wizard for new users
+ */
+async function showOnboardingWizard(chatId, userId, userName) {
+  const welcomeMessage = `👋 *Bem-vindo ao Perninhasclimabot, ${userName}!*
+
+Para receber previsões personalizadas, preciso saber sua localização.
+
+Escolha como deseja configurar:`;
+
+  const replyMarkup = {
+    inline_keyboard: [
+      [
+        { text: '📍 Usar GPS', callback_data: 'onboard_location_gps' }
+      ],
+      [
+        { text: '🌐 Detectar via IP', callback_data: 'onboard_location_ip' }
+      ],
+      [
+        { text: '✏️ Digitar cidade', callback_data: 'onboard_location_manual' }
+      ]
+    ]
+  };
+
+  await sendTelegramMessage(chatId, welcomeMessage, {
+    reply_markup: replyMarkup,
+    parse_mode: 'Markdown'
+  });
+
+  console.log(`✓ Onboarding wizard shown to user ${userId}`);
+}
+
+/**
+ * Complete onboarding process
+ */
+async function completeOnboarding(chatId, userId, locationName) {
+  // Mark onboarding as complete
+  const preferences = getUserPreferences(userId);
+  preferences.onboarding_complete = true;
+  saveUserPreferences(userId, preferences);
+
+  const message = `✅ *Localização configurada!*
+
+📍 ${locationName}
+
+Agora você pode escolher seus horários de notificação (opcional):`;
+
+  const replyMarkup = {
+    inline_keyboard: [
+      [
+        { text: '⚙️ Configurar horários', callback_data: 'config_menu' }
+      ],
+      [
+        { text: '📅 Ver Previsão', callback_data: 'menu' }
+      ]
+    ]
+  };
+
+  await sendTelegramMessage(chatId, message, {
+    reply_markup: replyMarkup,
+    parse_mode: 'Markdown'
+  });
+
+  console.log(`✓ Onboarding completed for user ${userId}`);
+}
+
+/**
+ * Request GPS location for onboarding
+ */
+async function requestLocationForOnboarding(chatId, userId) {
+  const responseText = '📍 *Compartilhe sua localização*\n\n_Um botão aparecerá no teclado do chat. Clique nele para enviar sua localização GPS._';
+
+  await sendTelegramMessage(chatId, responseText, {
+    parse_mode: 'Markdown',
+    reply_markup: {
+      keyboard: [[
+        { text: '📍 Enviar Localização', request_location: true }
+      ]],
+      one_time_keyboard: true,
+      resize_keyboard: true
+    }
+  });
+
+  console.log('✓ Location request for onboarding sent');
+}
+
+/**
+ * Handle IP-based location for onboarding
+ */
+async function handleIPLocationForOnboarding(chatId, userId) {
+  await sendTelegramMessage(chatId, '🔄 Detectando localização via IP... Aguarde...');
+
+  try {
+    const location = await getIPLocation();
+    const locationName = await getLocationName(location.lat, location.lon);
+
+    // Save user location
+    saveUserLocation(userId, location.lat, location.lon, locationName);
+
+    // Complete onboarding
+    await completeOnboarding(chatId, userId, locationName);
+
+    console.log(`✓ IP-based location saved for onboarding ${userId}: ${locationName}`);
+  } catch (error) {
+    console.error('ERROR: Failed to get IP location for onboarding:', error.message);
+    await sendTelegramMessage(chatId, '❌ Erro ao detectar localização via IP. Por favor, use GPS ou digite o nome da cidade.', {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            { text: '📍 Usar GPS', callback_data: 'onboard_location_gps' }
+          ],
+          [
+            { text: '✏️ Digitar cidade', callback_data: 'onboard_location_manual' }
+          ]
+        ]
+      }
+    });
+  }
+}
+
+/**
+ * Request city name for onboarding
+ */
+async function requestCityNameForOnboarding(chatId, userId) {
+  // Set pending input state with onboarding flag
+  setPendingInput(userId, 'onboarding_city_name');
+
+  const responseText = '✏️ *Digite o nome da cidade:*\n\nExemplo: São Paulo, Rio de Janeiro, Curitiba\n\n_Digite apenas o nome da cidade e envie._';
+
+  await sendTelegramMessage(chatId, responseText, {
+    parse_mode: 'Markdown',
+    reply_markup: {
+      remove_keyboard: true
+    }
+  });
+
+  console.log('✓ City name request for onboarding sent');
 }
 
 /**
@@ -482,6 +647,7 @@ async function requestLocation(chatId) {
  * Handle location sharing from user
  */
 async function handleLocationSharing(chatId, location) {
+  const userId = chatId;
   const lat = location.latitude;
   const lon = location.longitude;
 
@@ -490,18 +656,28 @@ async function handleLocationSharing(chatId, location) {
     const locationName = await getLocationName(lat, lon);
 
     // Save user location
-    saveUserLocation(chatId, lat, lon, locationName);
+    saveUserLocation(userId, lat, lon, locationName);
 
-    const responseText = `✅ *Localização atualizada!*\n\n📍 ${locationName}\n\nLat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`;
+    // Check if this is part of onboarding
+    const preferences = getUserPreferences(userId);
+    const onboardingComplete = preferences.onboarding_complete || false;
 
-    await sendTelegramMessage(chatId, responseText, {
-      parse_mode: 'Markdown',
-      reply_markup: {
-        remove_keyboard: true
-      }
-    });
+    if (!onboardingComplete) {
+      // Complete onboarding
+      await completeOnboarding(chatId, userId, locationName);
+    } else {
+      // Regular location update
+      const responseText = `✅ *Localização atualizada!*\n\n📍 ${locationName}\n\nLat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`;
 
-    console.log(`✓ Location saved for ${chatId}: ${locationName}`);
+      await sendTelegramMessage(chatId, responseText, {
+        parse_mode: 'Markdown',
+        reply_markup: {
+          remove_keyboard: true
+        }
+      });
+    }
+
+    console.log(`✓ Location saved for ${userId}: ${locationName}`);
   } catch (error) {
     console.error('ERROR: Failed to process location:', error.message);
     await sendTelegramMessage(chatId, '❌ Erro ao processar localização. Tente novamente.');
@@ -561,6 +737,7 @@ async function requestCityName(chatId) {
  * Handle city name input
  */
 async function handleCityLocation(chatId, input) {
+  const userId = chatId;
   let cityName = input;
 
   // Check if input has the "city:" or "cidade:" prefix
@@ -581,15 +758,25 @@ async function handleCityLocation(chatId, input) {
     const location = await geocodeCity(cityName);
 
     // Save user location
-    saveUserLocation(chatId, location.lat, location.lon, location.name);
+    saveUserLocation(userId, location.lat, location.lon, location.name);
 
-    const responseText = `✅ *Localização atualizada!*\n\n📍 ${location.name}\n\nLat: ${location.lat.toFixed(4)}, Lon: ${location.lon.toFixed(4)}`;
+    // Check if this is part of onboarding
+    const preferences = getUserPreferences(userId);
+    const onboardingComplete = preferences.onboarding_complete || false;
 
-    await sendTelegramMessage(chatId, responseText, {
-      parse_mode: 'Markdown'
-    });
+    if (!onboardingComplete) {
+      // Complete onboarding
+      await completeOnboarding(chatId, userId, location.name);
+    } else {
+      // Regular location update
+      const responseText = `✅ *Localização atualizada!*\n\n📍 ${location.name}\n\nLat: ${location.lat.toFixed(4)}, Lon: ${location.lon.toFixed(4)}`;
 
-    console.log(`✓ City location saved for ${chatId}: ${location.name}`);
+      await sendTelegramMessage(chatId, responseText, {
+        parse_mode: 'Markdown'
+      });
+    }
+
+    console.log(`✓ City location saved for ${userId}: ${location.name}`);
   } catch (error) {
     console.error('ERROR: Failed to geocode city:', error.message);
     await sendTelegramMessage(chatId, `❌ Não foi possível encontrar a cidade "${cityName}". Verifique o nome e tente novamente.`);
@@ -744,6 +931,25 @@ Hoje - Restante do dia (horas futuras)
 Amanhã - Previsão completa de amanhã
 Próximos 3 dias - Previsão estendida
 Próximos 7 dias - Previsão semanal
+
+---
+
+🌍 *Sobre as Previsões:*
+
+Nosso bot usa a API Open-Meteo, que combina dados de múltiplos modelos meteorológicos internacionais (ECMWF, GFS, ICON) - os mesmos usados por apps comerciais.
+
+🎾 *Diferencial para Tenistas:*
+• Previsões focadas em condições de jogo
+• Alertas de chuva em mm e vento em km/h
+• Recomendações baseadas na realidade do saibro
+
+📱 *Por que usar o bot?*
+• Mensagens personalizadas pro grupo Perninhas
+• Alertas automáticos no Telegram
+• Zero apps extras para instalar
+• Humor e dicas que você não encontra em lugar nenhum
+
+⚠️ *Lembre-se:* Previsões do tempo são estimativas. Sempre confira condições reais antes de ir pra quadra!
 
 ---
 
