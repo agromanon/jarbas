@@ -215,6 +215,8 @@ async function handleCallbackQuery(callbackQuery) {
   // Handle different callback types
   if (data === 'menu') {
     await showForecastMenu(chatId);
+  } else if (data === 'partner') {
+    await showPartnerInfo(chatId);
   } else if (data === 'location_menu') {
     await showLocationMenu(chatId);
   } else if (data.startsWith('weather_')) {
@@ -300,6 +302,7 @@ async function showForecastMenu(chatId) {
         { text: '📍 Alterar Localização', callback_data: 'location_menu' }
       ],
       [
+        { text: '💎 Parceiro', callback_data: 'partner' },
         { text: '❓ Ajuda', callback_data: 'help' }
       ]
     ]
@@ -686,6 +689,35 @@ Entre em contato com o administrador do bot.`;
   });
 
   console.log('✓ Help message sent');
+}
+
+/**
+ * Show partner information
+ */
+async function showPartnerInfo(chatId) {
+  const partnerMessage = `💎 *Conheça Nosso Parceiro*
+
+✨ *Clínica Estética My Shape*
+📍 Vila Romana, São Paulo
+
+🌿 Tratamentos faciais e corporais
+💉 Toxina botulínica | Preenchimento
+🔥 Limpeza de pele | Peeling
+
+📱 WhatsApp: (11) 00134-6681
+📸 Instagram: @clinica.myshape
+🌐 myshape.com.br`;
+
+  await sendTelegramMessage(chatId, partnerMessage, {
+    reply_markup: {
+      inline_keyboard: [[
+        { text: '📅 Voltar ao Menu', callback_data: 'menu' }
+      ]]
+    },
+    parse_mode: 'Markdown'
+  });
+
+  console.log('✓ Partner info sent');
 }
 
 /**

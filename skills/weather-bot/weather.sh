@@ -202,7 +202,7 @@ format_weather_message() {
 
     # Build message
     local message="🌤️ ${header_title} - ${LOCATION_NAME}\n"
-    message+="━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+    message+="───────────────\n\n"
 
     if [ "$FORECAST_TYPE" = "today" ] || [ "$FORECAST_TYPE" = "tomorrow" ]; then
         local target_date=$(get_target_date "$FORECAST_TYPE")
@@ -254,7 +254,12 @@ format_weather_message() {
         show_all_hours=true
     fi
 
+    # For "today" and "tomorrow", we already added the date header above,
+    # so initialize last_displayed_date to prevent duplicate header
     local last_displayed_date=""
+    if [ "$FORECAST_TYPE" = "today" ] || [ "$FORECAST_TYPE" = "tomorrow" ]; then
+        last_displayed_date="$start_date"
+    fi
 
     for i in "${!time_array[@]}"; do
         local time="${time_array[$i]}"
@@ -288,7 +293,7 @@ format_weather_message() {
 
         if [ "$within_date_range" = true ] && [ -n "$hour" ] && [ "$display_hour" = true ]; then
 
-            if [ "$date" != "$last_displayed_date" ] && [ "$date" != "$start_date" ]; then
+            if [ "$date" != "$last_displayed_date" ]; then
                 message+="\n📅 $(get_date_pt "${date}")\n"
                 last_displayed_date="$date"
             fi
@@ -307,7 +312,8 @@ format_weather_message() {
         error "No weather data available for the specified time range"
     fi
 
-    message+="\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    message+="\n───────────────\n"
+    message+="✨ Oferecido por Clínica Estética My Shape - Vila Romana"
 
     echo -e "$message"
 }
