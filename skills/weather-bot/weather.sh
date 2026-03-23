@@ -58,8 +58,8 @@ get_personalized_phrase() {
 
 # Configuration
 TIMEZONE="America/Sao_Paulo"
-START_HOUR=8
-END_HOUR=18
+START_HOUR=6
+END_HOUR=23
 
 # Parse command line arguments
 FORECAST_TYPE="${1:-today}"
