@@ -1117,16 +1117,32 @@ function getWeatherForecast(type, lat, lon, locationName) {
     });
 
     child.on('close', (code) => {
+      console.log(`Forecast script exited with code ${code}`);
+      console.log(`Stdout length: ${stdout.length}`);
+      console.log(`Stderr: ${stderr}`);
+
       if (code !== 0) {
         console.error('Forecast script error:', stderr);
         reject(new Error(`Forecast script exited with code ${code}: ${stderr}`));
         return;
       }
 
+      if (!stdout.trim()) {
+        console.error('Forecast script returned empty output');
+        reject(new Error('Forecast script returned empty output'));
+        return;
+      }
+
       try {
         const result = JSON.parse(stdout.trim());
+        if (!result.message) {
+          console.error('Forecast JSON missing message field:', result);
+          reject(new Error('Forecast JSON missing message field'));
+          return;
+        }
         // Convert escaped newlines (\n) to actual newline characters
         const message = result.message.replace(/\\n/g, '\n');
+        console.log(`Forecast message generated, length: ${message.length}`);
         resolve(message);
       } catch (error) {
         console.error('Failed to parse forecast JSON:', stdout);

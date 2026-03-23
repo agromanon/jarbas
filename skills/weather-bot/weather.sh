@@ -152,17 +152,31 @@ fetch_weather() {
 format_weather_message() {
     local json="$1"
 
-    # Check if jq is available
+    local times=""
+    local temperatures=""
+    local rain_probs=""
+    local rain_amounts=""
+
+    # Try jq first, fallback to grep/sed if jq fails
     if [ "$USE_JQ" = true ]; then
-        local times=$(echo "$json" | jq -r '.hourly.time[]')
-        local temperatures=$(echo "$json" | jq -r '.hourly.temperature_2m[]')
-        local rain_probs=$(echo "$json" | jq -r '.hourly.precipitation_probability[]')
-        local rain_amounts=$(echo "$json" | jq -r '.hourly.precipitation[]')
+        times=$(echo "$json" | jq -r '.hourly.time[]' 2>/dev/null)
+        temperatures=$(echo "$json" | jq -r '.hourly.temperature_2m[]' 2>/dev/null)
+        rain_probs=$(echo "$json" | jq -r '.hourly.precipitation_probability[]' 2>/dev/null)
+        rain_amounts=$(echo "$json" | jq -r '.hourly.precipitation[]' 2>/dev/null)
+
+        # If jq failed, fallback to grep/sed
+        if [ -z "$times" ]; then
+            echo "Warning: jq failed, falling back to grep/sed" >&2
+            times=$(echo "$json" | grep -o '"time":"[^"]*"' | sed 's/"time":"//;s/"$//')
+            temperatures=$(echo "$json" | grep -o '"temperature_2m":[0-9.-]*' | sed 's/"temperature_2m"://')
+            rain_probs=$(echo "$json" | grep -o '"precipitation_probability":[0-9]*' | sed 's/"precipitation_probability"://')
+            rain_amounts=$(echo "$json" | grep -o '"precipitation":[0-9.]*' | sed 's/"precipitation"://')
+        fi
     else
-        local times=$(echo "$json" | grep -o '"time":"[^"]*"' | sed 's/"time":"//;s/"$//')
-        local temperatures=$(echo "$json" | grep -o '"temperature_2m":[0-9.-]*' | sed 's/"temperature_2m"://')
-        local rain_probs=$(echo "$json" | grep -o '"precipitation_probability":[0-9]*' | sed 's/"precipitation_probability"://')
-        local rain_amounts=$(echo "$json" | grep -o '"precipitation":[0-9.]*' | sed 's/"precipitation"://')
+        times=$(echo "$json" | grep -o '"time":"[^"]*"' | sed 's/"time":"//;s/"$//')
+        temperatures=$(echo "$json" | grep -o '"temperature_2m":[0-9.-]*' | sed 's/"temperature_2m"://')
+        rain_probs=$(echo "$json" | grep -o '"precipitation_probability":[0-9]*' | sed 's/"precipitation_probability"://')
+        rain_amounts=$(echo "$json" | grep -o '"precipitation":[0-9.]*' | sed 's/"precipitation"://')
     fi
 
     if [ -z "$times" ]; then
