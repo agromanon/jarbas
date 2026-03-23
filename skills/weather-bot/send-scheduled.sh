@@ -167,7 +167,7 @@ for user_id in $authorized_users; do
     notifications=$(get_user_notifications "$user_id")
 
     # Check if user has notification for this hour
-    if ! echo "$notifications" | grep -q "\"${HOUR}\""; then
+    if ! echo "$notifications" | grep -qw "${HOUR}"; then
         continue
     fi
 
