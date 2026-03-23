@@ -116,6 +116,7 @@ async function forwardToWeatherBotHandler(update) {
  * Detect if this is a weather-bot command
  * Weather-bot commands: /start, /menu, /location, /allow, /disallow, /listusers, /help
  * Also handles all callback queries (weather-bot uses extensive inline keyboards)
+ * Also handles all text messages except /tempo and previsão (handled by original weather handler)
  */
 function isWeatherBotCommand(update) {
   const hasMessage = update.message && update.message.text;
@@ -135,8 +136,14 @@ function isWeatherBotCommand(update) {
   // Check text commands
   if (hasMessage) {
     const text = update.message.text.trim().toLowerCase();
-    const weatherBotCommands = ['/start', '/menu', '/location', '/allow', '/disallow', '/listusers', '/help', 'menu', 'localização', 'ajuda', 'listar'];
-    return weatherBotCommands.some(cmd => text === cmd || text.startsWith(cmd + ' ')) || text.startsWith('city:') || text.startsWith('cidade:');
+    // Don't forward /tempo and previsão to weather-bot (handled by original weather handler)
+    if (text === '/tempo' || text === 'previsão') {
+      return false;
+    }
+    // Forward all other text messages to weather-bot handler
+    // The handler will check for pending input (e.g., waiting for city name)
+    // and handle commands appropriately
+    return true;
   }
 
   return false;

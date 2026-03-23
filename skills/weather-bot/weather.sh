@@ -50,7 +50,7 @@ check_dependencies() {
 # Get current date in Portuguese
 get_date_pt() {
     local date_str="$1"
-    date -d "$date_str" '+%A, %d/%m/%Y' | sed 's/Monday/Segunda-feira/;s/Tuesday/Terça-feira/;s/Wednesday/Quarta-feira/;s/Thursday/Quinta-feira/;s/Friday/Sexta-feira/;s/Saturday/Sábado/;s/Sunday/Domingo/'
+    TZ="${TIMEZONE}" date -d "$date_str" '+%A, %d/%m/%Y' | sed 's/Monday/Segunda-feira/;s/Tuesday/Terça-feira/;s/Wednesday/Quarta-feira/;s/Thursday/Quinta-feira/;s/Friday/Sexta-feira/;s/Saturday/Sábado/;s/Sunday/Domingo/'
 }
 
 # Get number of forecast days based on type
@@ -92,7 +92,7 @@ get_target_date() {
             ;;
     esac
 
-    date -d "+${offset} days" '+%Y-%m-%d'
+    TZ="${TIMEZONE}" date -d "+${offset} days" '+%Y-%m-%d'
 }
 
 # Get end date for filtering (for multi-day forecasts)
@@ -106,7 +106,7 @@ get_end_date() {
             get_target_date "$type"
             ;;
         *)
-            date '+%Y-%m-%d'
+            TZ="${TIMEZONE}" date '+%Y-%m-%d'
             ;;
     esac
 }
@@ -222,7 +222,7 @@ format_weather_message() {
     done <<< "$rain_amounts"
 
     # Get date filtering parameters
-    local today_date=$(date '+%Y-%m-%d')
+    local today_date=$(TZ="${TIMEZONE}" date '+%Y-%m-%d')
     local current_hour=$(TZ="${TIMEZONE}" date '+%H' | sed 's/^0//')
 
     local start_date
@@ -234,8 +234,10 @@ format_weather_message() {
     local end_date=$(get_end_date "$FORECAST_TYPE")
 
     local filter_current_hour=false
+    local show_all_hours=false
     if [ "$FORECAST_TYPE" = "today" ]; then
         filter_current_hour=true
+        show_all_hours=true
     fi
 
     local last_displayed_date=""
@@ -256,10 +258,21 @@ format_weather_message() {
             fi
         fi
 
-        if [ "$within_date_range" = true ] && [ -n "$hour" ] && [ "$hour" -ge "$START_HOUR" ] && [ "$hour" -le "$END_HOUR" ]; then
-            if [ "$filter_current_hour" = true ] && [ "$date" = "$today_date" ] && [ "$hour" -lt "$current_hour" ]; then
-                continue
+        # Determine if this hour should be displayed
+        local display_hour=false
+        if [ "$show_all_hours" = true ] && [ "$date" = "$today_date" ]; then
+            # For today, show all hours from current_hour onwards
+            if [ "$hour" -ge "$current_hour" ]; then
+                display_hour=true
             fi
+        else
+            # For other days, show hours 8-18
+            if [ "$hour" -ge "$START_HOUR" ] && [ "$hour" -le "$END_HOUR" ]; then
+                display_hour=true
+            fi
+        fi
+
+        if [ "$within_date_range" = true ] && [ -n "$hour" ] && [ "$display_hour" = true ]; then
 
             if [ "$date" != "$last_displayed_date" ] && [ "$date" != "$start_date" ]; then
                 message+="\n📅 $(get_date_pt "${date}")\n"
