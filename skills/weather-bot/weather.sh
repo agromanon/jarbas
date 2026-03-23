@@ -23,16 +23,20 @@ get_personalized_phrase() {
     fi
     
     # Determine category based on conditions (priority: heavy_rain > light_rain > windy > perfect)
+    # Use bash integer comparison (multiply by 10 to handle decimals without bc)
+    local rain_int=$(echo "$rain_mm" | awk '{printf "%.0f", $1 * 10}')
+    local wind_int=$(echo "$wind_kmh" | awk '{printf "%.0f", $1}')
+    
     local category=""
     local replace_value=""
     
-    if (( $(echo "$rain_mm > 5" | bc -l) )); then
+    if [ "$rain_int" -gt 50 ]; then
         category="heavy_rain"
         replace_value="$rain_mm"
-    elif (( $(echo "$rain_mm > 0" | bc -l) )); then
+    elif [ "$rain_int" -gt 0 ]; then
         category="light_rain"
         replace_value="$rain_mm"
-    elif (( $(echo "$wind_kmh > 20" | bc -l) )); then
+    elif [ "$wind_int" -gt 20 ]; then
         category="windy"
         replace_value="$wind_kmh"
     else
@@ -60,6 +64,7 @@ get_personalized_phrase() {
 TIMEZONE="America/Sao_Paulo"
 START_HOUR=6
 END_HOUR=23
+MAX_MESSAGE_LENGTH=4000
 
 # Parse command line arguments
 FORECAST_TYPE="${1:-today}"
@@ -325,6 +330,12 @@ format_weather_message() {
         show_all_hours=true
     fi
 
+    # For 7 days, show fewer hours to keep message under limit
+    local hour_step=1
+    if [ "$FORECAST_TYPE" = "7days" ]; then
+        hour_step=3  # Show every 3 hours: 6h, 9h, 12h, 15h, 18h, 21h
+    fi
+
     # For "today" and "tomorrow", we already added the date header above,
     # so initialize last_displayed_date to prevent duplicate header
     local last_displayed_date=""
@@ -357,9 +368,16 @@ format_weather_message() {
                 display_hour=true
             fi
         else
-            # For other days, show hours START_HOUR to END_HOUR
+            # For other days, show hours START_HOUR to END_HOUR with step
             if [ "$hour" -ge "$START_HOUR" ] && [ "$hour" -le "$END_HOUR" ]; then
-                display_hour=true
+                # For 7 days, only show hours divisible by hour_step
+                if [ "$FORECAST_TYPE" = "7days" ]; then
+                    if [ $((hour % hour_step)) -eq 0 ]; then
+                        display_hour=true
+                    fi
+                else
+                    display_hour=true
+                fi
             fi
         fi
 
@@ -388,6 +406,12 @@ format_weather_message() {
 
     message+="\n───────────────\n"
     message+="✨ Oferecido por Clínica Estética My Shape - Vila Romana"
+
+    # Check message length and warn if too long
+    local message_length=${#message}
+    if [ "$message_length" -gt "$MAX_MESSAGE_LENGTH" ]; then
+        echo "Warning: Message length ($message_length) exceeds limit ($MAX_MESSAGE_LENGTH)" >&2
+    fi
 
     echo -e "$message"
 }
