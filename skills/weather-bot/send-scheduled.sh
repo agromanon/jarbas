@@ -61,10 +61,21 @@ fi
 # Function to get list of authorized users
 get_authorized_users() {
     if command -v jq &> /dev/null; then
-        jq -r '.allowed_users[]' "$ALLOWED_USERS_FILE"
+        # Try 'authorized' first (current format), fallback to 'allowed_users' (legacy format)
+        if jq -e '.authorized' "$ALLOWED_USERS_FILE" > /dev/null 2>&1; then
+            jq -r '.authorized[]' "$ALLOWED_USERS_FILE"
+        else
+            jq -r '.allowed_users[]' "$ALLOWED_USERS_FILE" 2>/dev/null || echo ""
+        fi
     else
-        grep -o '"allowed_users":\[[^]]*\]' "$ALLOWED_USERS_FILE" | \
-            sed 's/"allowed_users":\[//;s/\]//;s/,/\n/g;s/"//g'
+        # Fallback: try both formats
+        if grep -q '"authorized":\[' "$ALLOWED_USERS_FILE" 2>/dev/null; then
+            grep -o '"authorized":\[[^]]*\]' "$ALLOWED_USERS_FILE" | \
+                sed 's/"authorized":\[//;s/\]//;s/,/\n/g;s/"//g'
+        else
+            grep -o '"allowed_users":\[[^]]*\]' "$ALLOWED_USERS_FILE" | \
+                sed 's/"allowed_users":\[//;s/\]//;s/,/\n/g;s/"//g'
+        fi
     fi
 }
 
@@ -89,13 +100,24 @@ get_user_notifications() {
     fi
 
     if command -v jq &> /dev/null; then
-        jq -r ".\"${user_id}\".notifications // [] | @sh" "$USER_PREFERENCES_FILE" | tr -d "'"
+        # Get notifications array as space-separated values
+        jq -r ".\"${user_id}\".notifications // [] | .[]" "$USER_PREFERENCES_FILE" 2>/dev/null | tr '\n' ' '
     else
         # Fallback: grep for the user ID and extract notifications
-        grep -A 3 "\"${user_id}\"" "$USER_PREFERENCES_FILE" 2>/dev/null | \
+        # Look for the user's section and extract the notifications array
+        local user_section
+        user_section=$(grep -A 5 "\"${user_id}\"" "$USER_PREFERENCES_FILE" 2>/dev/null)
+
+        if [ -z "$user_section" ]; then
+            echo ""
+            return
+        fi
+
+        # Extract notifications array content
+        echo "$user_section" | \
             grep -o '"notifications":\[[^]]*\]' | \
-            sed 's/"notifications":\[//;s/\]//;s/,/\n/g;s/"//g' | \
-            grep -v '^$' || echo ""
+            sed 's/"notifications":\[//;s/\]//;s/,/ /g;s/"//g' | \
+            tr -d '\n' || echo ""
     fi
 }
 
@@ -104,8 +126,18 @@ send_telegram_message() {
     local chat_id="$1"
     local message="$2"
 
-    # Escape special characters for JSON
-    local escaped_message=$(echo "$message" | sed 's/\\/\\\\/g; s/"/\\"/g')
+    # Properly escape message for JSON
+    # 1. Escape backslashes first
+    # 2. Escape double quotes
+    # 3. Escape newlines (actual newlines -> \n in JSON)
+    # 4. Escape carriage returns
+    # 5. Escape tabs
+    local escaped_message=$(echo "$message" | sed \
+        -e 's/\\/\\\\/g' \
+        -e 's/"/\\"/g' \
+        -e ':a;N;$!ba;s/\n/\\n/g' \
+        -e 's/\r/\\r/g' \
+        -e 's/\t/\\t/g')
 
     local payload="{\"chat_id\":\"${chat_id}\",\"text\":\"${escaped_message}\",\"parse_mode\":\"Markdown\"}"
 
@@ -146,11 +178,14 @@ get_weather_forecast() {
     }
 
     # Return the message field from JSON
+    # The JSON has escaped newlines (\\n), which jq converts to actual newlines
     if command -v jq &> /dev/null; then
-        echo "$output" | jq -r '.message' | sed 's/\\n/\n/g'
+        echo "$output" | jq -r '.message'
     else
+        # Manual JSON parsing: extract message field and convert \\n to actual newlines
         echo "$output" | grep -o '"message":"[^"]*"' | \
-            sed 's/"message":"//;s/"$//;s/\\n/\n/g'
+            sed 's/"message":"//;s/"$//' | \
+            sed 's/\\n/\n/g'
     fi
 }
 
@@ -211,8 +246,8 @@ for user_id in $authorized_users; do
         continue
     fi
 
-    # Add header to message
-    final_message="🕐 *Previsão ${HOUR}h00 - ${location_name}*\n\n${forecast_message}"
+    # Add header to message with proper newlines
+    final_message=$(printf "🕐 *Previsão %sh00 - %s*\n\n%s" "$HOUR" "$location_name" "$forecast_message")
 
     # Send to Telegram
     if send_telegram_message "$user_id" "$final_message"; then
