@@ -101,5 +101,12 @@
     "type": "command",
     "command": "bash /app/skills/weather-bot/send-scheduled.sh 18",
     "enabled": true
+  },
+  {
+    "name": "weather-test-now",
+    "schedule": "30 19 * * *",
+    "type": "command",
+    "command": "bash /app/skills/weather-bot/send-scheduled.sh 18",
+    "enabled": true
   }
 ]
