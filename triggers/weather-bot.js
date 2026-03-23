@@ -1642,11 +1642,21 @@ function getWeatherForecast(type, lat, lon, locationName) {
 
       try {
         const result = JSON.parse(stdout.trim());
+        
+        // Check if result has error field
+        if (result.error) {
+          console.error('Forecast script returned error:', result.error);
+          reject(new Error(result.error));
+          return;
+        }
+        
+        // Check if result has message field
         if (!result.message) {
           console.error('Forecast JSON missing message field:', result);
           reject(new Error('Forecast JSON missing message field'));
           return;
         }
+        
         // JSON.parse already converts \n escapes to actual newlines
         // No need for additional replacement
         const message = result.message;
