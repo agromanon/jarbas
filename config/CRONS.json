@@ -103,10 +103,10 @@
     "enabled": true
   },
   {
-    "name": "weather-test-now",
-    "schedule": "30 19 * * *",
+    "name": "weather-20h",
+    "schedule": "0 20 * * *",
     "type": "command",
-    "command": "bash /app/skills/weather-bot/send-scheduled.sh 18",
+    "command": "bash /app/skills/weather-bot/send-scheduled.sh 20",
     "enabled": true
   }
 ]

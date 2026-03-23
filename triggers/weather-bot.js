@@ -240,9 +240,9 @@ async function handleCallbackQuery(callbackQuery) {
 
   // Check authorization for all other callbacks except location-related and onboarding
   if (!data.startsWith('location_') &&
-      !data.startsWith('loc_menu_') &&
-      !data.startsWith('onboard_') &&
-      !isAuthorized(userId)) {
+    !data.startsWith('loc_menu_') &&
+    !data.startsWith('onboard_') &&
+    !isAuthorized(userId)) {
     await sendAuthorizationMessage(chatId, userId);
     return;
   }
@@ -302,7 +302,7 @@ async function handleStart(chatId, message) {
   if (!isAuthorized(userId)) {
     // Check if user is already in pending list
     const pendingUsers = getPendingUsers();
-    
+
     if (pendingUsers.includes(userId)) {
       // User already requested access
       await sendTelegramMessage(chatId, `⏳ *Aguarde...*\n\nVocê já solicitou acesso. Seu pedido está sendo analisado pelo administrador.\n\nVocê será notificado em breve.`, {
@@ -791,7 +791,7 @@ async function showConfigMenu(chatId) {
   const notifications = preferences.notifications || [];
 
   // Build inline keyboard with hour selection
-  const hours = ['6', '8', '10', '12', '14', '16', '18'];
+  const hours = ['6', '8', '10', '12', '14', '16', '18', '20'];
 
   const replyMarkup = {
     inline_keyboard: []
@@ -1128,7 +1128,7 @@ async function handleApproveUser(callbackQuery) {
   try {
     // Add user to authorized list
     const allowedUsers = getAllowedUsers();
-    
+
     if (allowedUsers.includes(userId)) {
       await answerCallbackQuery(callbackId, '⚠️ Usuário já está autorizado.');
       return;
@@ -1287,7 +1287,7 @@ function getAllowedUsers() {
 function saveAllowedUsers(users) {
   try {
     ensureDataDir();
-    
+
     // Read existing data to preserve pending users
     let existingData = { authorized: [], pending: [] };
     try {
@@ -1328,7 +1328,7 @@ function getPendingUsers() {
 function addPendingUser(userId) {
   try {
     ensureDataDir();
-    
+
     // Read existing data
     let data = { admin: WEATHER_BOT_ADMIN_ID, authorized: [WEATHER_BOT_ADMIN_ID], pending: [] };
     try {
@@ -1359,7 +1359,7 @@ function addPendingUser(userId) {
 function removePendingUser(userId) {
   try {
     ensureDataDir();
-    
+
     // Read existing data
     let data = { admin: WEATHER_BOT_ADMIN_ID, authorized: [WEATHER_BOT_ADMIN_ID], pending: [] };
     try {
@@ -1642,21 +1642,21 @@ function getWeatherForecast(type, lat, lon, locationName) {
 
       try {
         const result = JSON.parse(stdout.trim());
-        
+
         // Check if result has error field
         if (result.error) {
           console.error('Forecast script returned error:', result.error);
           reject(new Error(result.error));
           return;
         }
-        
+
         // Check if result has message field
         if (!result.message) {
           console.error('Forecast JSON missing message field:', result);
           reject(new Error('Forecast JSON missing message field'));
           return;
         }
-        
+
         // JSON.parse already converts \n escapes to actual newlines
         // No need for additional replacement
         const message = result.message;
