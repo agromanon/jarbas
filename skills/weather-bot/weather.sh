@@ -328,11 +328,18 @@ main() {
     local formatted_message
     formatted_message=$(format_weather_message "$weather_json")
 
-    # Output as JSON
-    # 1. First escape backslashes and quotes
-    # 2. Then convert actual newlines to \n for JSON
-    local escaped_message=$(echo "$formatted_message" | sed 's/\\/\\\\/g; s/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
-    echo "{\"message\":\"${escaped_message}\"}"
+    # Output as JSON using jq for proper escaping
+    if [ "$USE_JQ" = true ]; then
+        # Use jq to properly escape the message for JSON
+        echo "$formatted_message" | jq -Rs '{message: .}'
+    else
+        # Fallback: manual JSON escaping (less reliable)
+        # 1. First escape backslashes
+        # 2. Then escape quotes
+        # 3. Then convert actual newlines to \n
+        local escaped_message=$(echo "$formatted_message" | sed 's/\\/\\\\/g; s/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
+        echo "{\"message\":\"${escaped_message}\"}"
+    fi
 }
 
 main
