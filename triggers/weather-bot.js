@@ -704,9 +704,9 @@ async function showPartnerInfo(chatId) {
 💉 Toxina botulínica | Preenchimento
 🔥 Limpeza de pele | Peeling
 
-📱 WhatsApp: (11) 00134-6681
-📸 Instagram: @clinica.myshape
-🌐 myshape.com.br`;
+[📱 WhatsApp: (11) 99134‑6681](https://wa.me/5511991346681)
+[📸 Instagram: @clinica.myshape](https://www.instagram.com/clinica.myshape)
+[🌐 myshape.com.br](https://myshape.com.br)`;
 
   await sendTelegramMessage(chatId, partnerMessage, {
     reply_markup: {
