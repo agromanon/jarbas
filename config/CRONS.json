@@ -58,14 +58,16 @@
     "schedule": "0 6 * * *",
     "type": "command",
     "command": "/app/skills/weather-forecast/forecast.sh",
-    "enabled": true
+    "enabled": false,
+    "comment": "Disabled - use weather-bot scheduled forecasts instead (weather-06h, weather-12h, etc.)"
   },
   {
     "name": "weather-lunch",
     "schedule": "0 12 * * *",
     "type": "command",
     "command": "/app/skills/weather-forecast/forecast.sh",
-    "enabled": true
+    "enabled": false,
+    "comment": "Disabled - use weather-bot scheduled forecasts instead (weather-06h, weather-12h, etc.)"
   },
   {
     "name": "weather-06h",
