@@ -42,6 +42,9 @@ skills/ai-opportunity-radar/
 ├── radar.sh              # Script principal de orquestração
 ├── analyze.sh            # Análise e scoring de produtos
 ├── telegram.sh           # Envio de relatório via Telegram
+├── diagnose.sh           # Diagnóstico de problemas
+├── test-telegram.sh      # Teste de conexão Telegram
+├── find-chat-id.sh       # Descobrir chat_id correto
 └── sources/
     ├── theresanaiforthat.sh  # Coleta do There's An AI For That
     ├── producthunt.sh        # Coleta do Product Hunt
@@ -77,22 +80,54 @@ Produtos são descartados automaticamente se:
 - `curl` - Para scraping e API calls
 - `jq` - Para parsing de JSON
 - `grep`, `sed`, `awk` - Para parsing de HTML/texto
-- Variáveis de ambiente:
-  - `RADAR_TELEGRAM_BOT_TOKEN` - Token do bot Telegram
-  - `RADAR_TELEGRAM_CHAT_ID` - Chat ID de destino
+- Variáveis de ambiente (veja seção Configuração)
 
 ## Configuração
 
 ### Variáveis de Ambiente
 
-| Variável | Descrição | Obrigatório |
-|----------|-------------|-------------|
-| `RADAR_TELEGRAM_BOT_TOKEN` | Token do bot Telegram do @BotFather | Sim |
-| `RADAR_TELEGRAM_CHAT_ID` | Chat ID para receber relatórios | Sim |
+O script aceita duas opções de configuração:
+
+**Opção 1: Variáveis específicas do Radar (recomendado)**
+
+| Variável | Descrição |
+|----------|-------------|
+| `RADAR_TELEGRAM_BOT_TOKEN` | Token do bot Telegram do @BotFather |
+| `RADAR_TELEGRAM_CHAT_ID` | Chat ID para receber relatórios |
+
+**Opção 2: Variáveis globais (fallback)**
+
+| Variável | Descrição |
+|----------|-------------|
+| `TELEGRAM_BOT_TOKEN` | Token do bot Telegram global |
+| `TELEGRAM_CHAT_ID` | Chat ID global para notificações |
+
+### Configuração via GitHub Secrets
+
+Para que as variáveis estejam disponíveis no container do agente, configure como GitHub Secrets com o prefixo `AGENT_LLM_`:
+
+```
+AGENT_LLM_RADAR_TELEGRAM_BOT_TOKEN=seu-bot-token
+AGENT_LLM_RADAR_TELEGRAM_CHAT_ID=seu-chat-id
+```
+
+Ou use as variáveis globais:
+
+```
+AGENT_LLM_TELEGRAM_BOT_TOKEN=seu-bot-token
+AGENT_LLM_TELEGRAM_CHAT_ID=seu-chat-id
+```
+
+### Como Descobrir seu Chat ID
+
+1. **Abra o Telegram** e inicie uma conversa com seu bot
+2. **Use @userinfobot** - envie `/start` e ele retornará seu ID
+3. **Ou acesse a API**: `https://api.telegram.org/bot<TOKEN>/getUpdates`
+4. **Procure por**: `"chat":{"id":SEU_CHAT_ID`
 
 ### Cron Job
 
-Adicionar em `config/CRONS.json`:
+Configurado em `config/CRONS.json`:
 
 ```json
 {
@@ -100,11 +135,46 @@ Adicionar em `config/CRONS.json`:
   "schedule": "0 9 * * 1,5",
   "enabled": true,
   "type": "command",
-  "command": "skills/ai-opportunity-radar/radar.sh"
+  "command": "bash /app/skills/ai-opportunity-radar/radar.sh"
 }
 ```
 
 Executa às 9h nas segundas e sextas-feiras.
+
+## Diagnóstico e Testes
+
+### Verificar Configuração
+
+```bash
+# Diagnóstico completo
+skills/ai-opportunity-radar/diagnose.sh
+
+# Testar conexão Telegram
+skills/ai-opportunity-radar/test-telegram.sh
+
+# Descobrir chat_id
+skills/ai-opportunity-radar/find-chat-id.sh
+```
+
+### Problemas Comuns
+
+**Erro: "chat not found"**
+
+Causa: O bot não pode enviar mensagens para o chat_id fornecido.
+
+Solução:
+1. Abra o Telegram e procure pelo seu bot
+2. Clique em "Start" para iniciar uma conversa
+3. Descubra seu chat_id correto usando `find-chat-id.sh` ou @userinfobot
+4. Atualize a variável `RADAR_TELEGRAM_CHAT_ID`
+
+**Erro: "variável não definida"**
+
+Causa: As variáveis de ambiente não foram configuradas.
+
+Solução:
+1. Configure os GitHub Secrets com prefixo `AGENT_LLM_`
+2. Ou exporte as variáveis manualmente para testes
 
 ## Saída
 

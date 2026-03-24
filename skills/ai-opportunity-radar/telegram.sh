@@ -29,16 +29,41 @@ if [ ! -f "$REPORT_FILE" ]; then
     exit 1
 fi
 
-# Check environment variables
-if [ -z "$RADAR_TELEGRAM_BOT_TOKEN" ]; then
-    error "RADAR_TELEGRAM_BOT_TOKEN not set"
+# Check environment variables - support both RADAR_* and global TELEGRAM_*
+BOT_TOKEN="${RADAR_TELEGRAM_BOT_TOKEN:-${TELEGRAM_BOT_TOKEN:-}}"
+CHAT_ID="${RADAR_TELEGRAM_CHAT_ID:-${TELEGRAM_CHAT_ID:-}}"
+
+if [ -z "$BOT_TOKEN" ]; then
+    error "BOT_TOKEN not set"
+    error ""
+    error "Configure one of these GitHub secrets:"
+    error "  AGENT_LLM_RADAR_TELEGRAM_BOT_TOKEN=<your-bot-token>"
+    error "  AGENT_LLM_TELEGRAM_BOT_TOKEN=<your-bot-token>"
+    error ""
+    error "Or export directly:"
+    error "  export RADAR_TELEGRAM_BOT_TOKEN=<your-bot-token>"
+    error "  export TELEGRAM_BOT_TOKEN=<your-bot-token>"
     exit 1
 fi
 
-if [ -z "$RADAR_TELEGRAM_CHAT_ID" ]; then
-    error "RADAR_TELEGRAM_CHAT_ID not set"
+if [ -z "$CHAT_ID" ]; then
+    error "CHAT_ID not set"
+    error ""
+    error "Configure one of these GitHub secrets:"
+    error "  AGENT_LLM_RADAR_TELEGRAM_CHAT_ID=<your-chat-id>"
+    error "  AGENT_LLM_TELEGRAM_CHAT_ID=<your-chat-id>"
+    error ""
+    error "To find your chat ID:"
+    error "  1. Start a conversation with your bot on Telegram"
+    error "  2. Visit: https://api.telegram.org/bot<TOKEN>/getUpdates"
+    error "  3. Look for 'chat\":{\"id\":<YOUR_CHAT_ID>'"
+    error "  4. Or use @userinfobot on Telegram"
     exit 1
 fi
+
+# Export for use in this script
+export RADAR_TELEGRAM_BOT_TOKEN="$BOT_TOKEN"
+export RADAR_TELEGRAM_CHAT_ID="$CHAT_ID"
 
 TELEGRAM_API="https://api.telegram.org/bot${RADAR_TELEGRAM_BOT_TOKEN}"
 MAX_MESSAGE_LENGTH=4096
