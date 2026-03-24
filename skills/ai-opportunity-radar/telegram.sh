@@ -3,6 +3,13 @@
 # AI Opportunity Radar - Telegram Sender
 # Envia relatório formatado via Telegram API
 #
+# Usage:
+#   telegram.sh <report-file> [--bot-token TOKEN] [--chat-id ID]
+#
+# Credentials can be provided via:
+#   1. Command-line arguments: --bot-token and --chat-id
+#   2. Environment variables: RADAR_TELEGRAM_BOT_TOKEN and RADAR_TELEGRAM_CHAT_ID
+#
 
 set -e
 
@@ -16,27 +23,55 @@ error() {
     echo "[telegram] ERROR: $1" >&2
 }
 
-# Check arguments
-if [ -z "$1" ]; then
-    error "Usage: telegram.sh <report-file>"
+# Parse arguments
+REPORT_FILE=""
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --bot-token)
+            RADAR_TELEGRAM_BOT_TOKEN="$2"
+            shift 2
+            ;;
+        --chat-id)
+            RADAR_TELEGRAM_CHAT_ID="$2"
+            shift 2
+            ;;
+        --help)
+            echo "Usage: telegram.sh <report-file> [OPTIONS]"
+            echo ""
+            echo "Options:"
+            echo "  --bot-token TOKEN   Telegram bot token (or set RADAR_TELEGRAM_BOT_TOKEN)"
+            echo "  --chat-id ID        Telegram chat ID (or set RADAR_TELEGRAM_CHAT_ID)"
+            echo "  --help              Show this help"
+            exit 0
+            ;;
+        *)
+            if [ -z "$REPORT_FILE" ]; then
+                REPORT_FILE="$1"
+            fi
+            shift
+            ;;
+    esac
+done
+
+# Check report file
+if [ -z "$REPORT_FILE" ]; then
+    error "Usage: telegram.sh <report-file> [--bot-token TOKEN] [--chat-id ID]"
     exit 1
 fi
-
-REPORT_FILE="$1"
 
 if [ ! -f "$REPORT_FILE" ]; then
     error "Report file not found: $REPORT_FILE"
     exit 1
 fi
 
-# Check environment variables
+# Check credentials (prefer command-line args, fallback to env vars)
 if [ -z "$RADAR_TELEGRAM_BOT_TOKEN" ]; then
-    error "RADAR_TELEGRAM_BOT_TOKEN not set"
+    error "RADAR_TELEGRAM_BOT_TOKEN not set (use --bot-token or environment variable)"
     exit 1
 fi
 
 if [ -z "$RADAR_TELEGRAM_CHAT_ID" ]; then
-    error "RADAR_TELEGRAM_CHAT_ID not set"
+    error "RADAR_TELEGRAM_CHAT_ID not set (use --chat-id or environment variable)"
     exit 1
 fi
 

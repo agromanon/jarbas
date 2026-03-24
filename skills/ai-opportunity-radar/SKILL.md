@@ -83,12 +83,42 @@ Produtos são descartados automaticamente se:
 
 ## Configuração
 
+### Passo 1: Criar Bot no Telegram
+
+1. Abra o Telegram e procure por @BotFather
+2. Envie `/newbot` e siga as instruções
+3. Salve o token fornecido (ex: `123456789:ABCdefGHI...`)
+
+### Passo 2: Obter Chat ID
+
+⚠️ **IMPORTANTE:** O bot só pode enviar mensagens para chats que iniciaram conversa com ele.
+
+1. Abra o Telegram
+2. Procure pelo seu bot (ex: @Radariabr_bot)
+3. Envie qualquer mensagem (ex: `/start`)
+4. Execute o script de verificação:
+   ```bash
+   bash /tmp/radar-check-and-send.sh
+   ```
+5. O script vai capturar seu Chat ID automaticamente
+
+### Passo 3: Configurar Secrets no GitHub
+
+Adicione em **Settings > Secrets and variables > Actions**:
+
+| Secret Name | Valor |
+|-------------|-------|
+| `AGENT_LLM_RADAR_TELEGRAM_BOT_TOKEN` | Token do bot |
+| `AGENT_LLM_RADAR_TELEGRAM_CHAT_ID` | Chat ID capturado |
+
 ### Variáveis de Ambiente
 
 | Variável | Descrição | Obrigatório |
 |----------|-------------|-------------|
 | `RADAR_TELEGRAM_BOT_TOKEN` | Token do bot Telegram do @BotFather | Sim |
 | `RADAR_TELEGRAM_CHAT_ID` | Chat ID para receber relatórios | Sim |
+
+**Nota:** No thepopebot, use o prefixo `AGENT_LLM_` para secrets acessíveis ao LLM.
 
 ### Cron Job
 
