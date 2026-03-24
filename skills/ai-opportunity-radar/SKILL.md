@@ -7,6 +7,28 @@ description: Radar automatizado de oportunidades de IA/SaaS para o mercado brasi
 
 Radar automatizado que monitora tendências globais de IA/SaaS e identifica oportunidades específicas para o mercado brasileiro.
 
+## ⚡ Quick Start
+
+**Status**: ✅ Funcionando (testado em 2026-03-24)
+
+1. **Configure os GitHub Secrets** (obrigatório para uso automático):
+   ```
+   AGENT_LLM_RADAR_TELEGRAM_BOT_TOKEN=8470965695:AAHOOrl_o0K8bWHgT9ZyQt53eSjeKgZEZMM
+   AGENT_LLM_RADAR_TELEGRAM_CHAT_ID=5121600266
+   ```
+
+2. **Verifique a configuração**:
+   ```bash
+   bash skills/ai-opportunity-radar/verify-config.sh
+   ```
+
+3. **Execute o radar**:
+   ```bash
+   bash skills/ai-opportunity-radar/radar.sh
+   ```
+
+📖 **Guia completo de configuração**: [SETUP.md](SETUP.md)
+
 ## Funcionalidades
 
 - **Coleta multi-fonte**: There's An AI For That, Product Hunt, Reddit, Future Tools
