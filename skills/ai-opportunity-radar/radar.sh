@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# AI Opportunity Radar - Main orchestration script
-# Coleta, analisa e envia relatório de oportunidades IA para o mercado BR
+# AI Opportunity Radar - B2C Brasil Edition
+# Coleta, analisa e envia relatório de oportunidades B2C para o mercado BR
 #
 
 set -e
@@ -48,22 +48,24 @@ while [[ $# -gt 0 ]]; do
             ;;
         --input)
             INPUT_PRODUCTS="$2"
-            COLLECT=false  # Skip collection when input is provided
+            COLLECT=false
             shift 2
             ;;
         --help)
             echo "Usage: radar.sh [OPTIONS]"
             echo ""
+            echo "AI Opportunity Radar - B2C Brasil Edition"
+            echo ""
             echo "Options:"
             echo "  --collect-only       Only collect data from sources"
-            echo "  --analyze-only       Only analyze existing data (uses latest products.json)"
-            echo "  --input FILE         Analyze specific products.json file (skips collection)"
+            echo "  --analyze-only       Only analyze existing data"
+            echo "  --input FILE         Analyze specific products.json file"
             echo "  --send-only FILE     Only send existing report"
             echo "  --help               Show this help"
             echo ""
-            echo "Environment Variables (required for sending):"
-            echo "  RADAR_TELEGRAM_BOT_TOKEN  Telegram bot token from @BotFather"
-            echo "  RADAR_TELEGRAM_CHAT_ID    Target chat ID for notifications"
+            echo "Environment Variables:"
+            echo "  RADAR_TELEGRAM_BOT_TOKEN  Telegram bot token"
+            echo "  RADAR_TELEGRAM_CHAT_ID    Target chat ID"
             exit 0
             ;;
         *)
@@ -86,47 +88,50 @@ ANALYZE_LOG="$TEMP_DIR/analyze.log"
 
 echo '{"products": [], "timestamp": "'"$TIMESTAMP"'"}' > "$PRODUCTS_FILE"
 
-# Step 1: Collect data from sources
+# ============================================
+# STEP 1: COLLECT DATA FROM B2C SOURCES
+# ============================================
+
 if [ "$COLLECT" = true ]; then
-    log "Starting data collection..."
+    log "Starting B2C data collection..."
     
-    # Collect from There's An AI For That
-    if [ -f "$SOURCES_DIR/theresanaiforthat.sh" ]; then
-        log "Collecting from There's An AI For That..."
-        if bash "$SOURCES_DIR/theresanaiforthat.sh" >> "$COLLECT_LOG" 2>&1; then
-            log "✓ There's An AI For That collected"
+    # Collect from Consumer Tools (There's An AI For That - B2C filtered)
+    if [ -f "$SOURCES_DIR/consumer-tools.sh" ]; then
+        log "Collecting from Consumer Tools (There's An AI For That)..."
+        if bash "$SOURCES_DIR/consumer-tools.sh" >> "$COLLECT_LOG" 2>&1; then
+            log "✓ Consumer Tools collected"
         else
-            log "✗ Failed to collect from There's An AI For That"
+            log "✗ Failed to collect from Consumer Tools"
         fi
     fi
     
-    # Collect from Product Hunt
-    if [ -f "$SOURCES_DIR/producthunt.sh" ]; then
-        log "Collecting from Product Hunt..."
-        if bash "$SOURCES_DIR/producthunt.sh" >> "$COLLECT_LOG" 2>&1; then
-            log "✓ Product Hunt collected"
+    # Collect from Product Hunt B2C
+    if [ -f "$SOURCES_DIR/producthunt-b2c.sh" ]; then
+        log "Collecting from Product Hunt (B2C filter)..."
+        if bash "$SOURCES_DIR/producthunt-b2c.sh" >> "$COLLECT_LOG" 2>&1; then
+            log "✓ Product Hunt B2C collected"
         else
             log "✗ Failed to collect from Product Hunt"
         fi
     fi
     
-    # Collect from Reddit
-    if [ -f "$SOURCES_DIR/reddit.sh" ]; then
-        log "Collecting from Reddit..."
-        if bash "$SOURCES_DIR/reddit.sh" >> "$COLLECT_LOG" 2>&1; then
-            log "✓ Reddit collected"
+    # Collect from Reddit Pain Points
+    if [ -f "$SOURCES_DIR/reddit-painpoints.sh" ]; then
+        log "Collecting from Reddit (pain points)..."
+        if bash "$SOURCES_DIR/reddit-painpoints.sh" >> "$COLLECT_LOG" 2>&1; then
+            log "✓ Reddit pain points collected"
         else
             log "✗ Failed to collect from Reddit"
         fi
     fi
     
-    # Collect from Future Tools
-    if [ -f "$SOURCES_DIR/futuretools.sh" ]; then
-        log "Collecting from Future Tools..."
-        if bash "$SOURCES_DIR/futuretools.sh" >> "$COLLECT_LOG" 2>&1; then
-            log "✓ Future Tools collected"
+    # Collect from Social Trends
+    if [ -f "$SOURCES_DIR/social-trends.sh" ]; then
+        log "Collecting from Social Trends..."
+        if bash "$SOURCES_DIR/social-trends.sh" >> "$COLLECT_LOG" 2>&1; then
+            log "✓ Social Trends collected"
         else
-            log "✗ Failed to collect from Future Tools"
+            log "✗ Failed to collect from Social Trends"
         fi
     fi
     
@@ -137,121 +142,158 @@ if [ "$COLLECT" = true ]; then
     for source_file in "$TEMP_DIR"/source-*.json; do
         if [ -f "$source_file" ]; then
             SOURCE_PRODUCTS=$(cat "$source_file" | jq -r '.products // []')
-            MERGED_PRODUCTS=$(echo "$MERGED_PRODUCTS" "$SOURCE_PRODUCTS" | jq -s 'add | unique_by(.name)')
+            MERGED_PRODUCTS=$(echo "$MERGED_PRODUCTS" "$SOURCE_PRODUCTS" | jq -s 'add | unique_by(.name | ascii_downcase)')
         fi
     done
     
-    echo '{"products": '"$MERGED_PRODUCTS"', "timestamp": "'"$TIMESTAMP"'}}' > "$PRODUCTS_FILE"
+    echo '{"products": '"$MERGED_PRODUCTS"', "timestamp": "'"$TIMESTAMP"'"}' > "$PRODUCTS_FILE"
     
     PRODUCT_COUNT=$(cat "$PRODUCTS_FILE" | jq '.products | length')
     log "Collected $PRODUCT_COUNT products total"
 fi
 
-# Step 2: Analyze products
+# ============================================
+# STEP 2: ANALYZE PRODUCTS (B2C FOCUSED)
+# ============================================
+
 if [ "$ANALYZE" = true ]; then
-    log "Starting analysis..."
+    log "Starting B2C analysis..."
     
-    # Use input file if provided, otherwise use collected products
+    # Use input file if provided
     if [ -n "$INPUT_PRODUCTS" ] && [ -f "$INPUT_PRODUCTS" ]; then
         PRODUCTS_FILE="$INPUT_PRODUCTS"
         log "Using input file: $PRODUCTS_FILE"
     elif [ ! -f "$PRODUCTS_FILE" ] || [ ! -s "$PRODUCTS_FILE" ]; then
-        # Look for most recent products.json in /tmp/radar-* directories
         LATEST_PRODUCTS=$(ls -td /tmp/radar-*/products.json 2>/dev/null | head -1)
         if [ -n "$LATEST_PRODUCTS" ] && [ -f "$LATEST_PRODUCTS" ]; then
             PRODUCTS_FILE="$LATEST_PRODUCTS"
             log "Using latest products file: $PRODUCTS_FILE"
         else
-            error "No products file found. Run with --collect-only first or provide --input FILE"
+            error "No products file found. Run with --collect-only first"
             exit 1
         fi
     fi
     
     PRODUCT_COUNT=$(cat "$PRODUCTS_FILE" | jq '.products | length')
     
-    if [ -f "$SCRIPT_DIR/analyze.sh" ]; then
-        if bash "$SCRIPT_DIR/analyze.sh" "$PRODUCTS_FILE" "$ANALYZED_FILE" >> "$ANALYZE_LOG" 2>&1; then
-            log "✓ Analysis completed"
+    if [ -f "$SCRIPT_DIR/analyze-b2c.sh" ]; then
+        if bash "$SCRIPT_DIR/analyze-b2c.sh" "$PRODUCTS_FILE" "$ANALYZED_FILE" >> "$ANALYZE_LOG" 2>&1; then
+            log "✓ B2C Analysis completed"
         else
             error "Analysis failed"
             cat "$ANALYZE_LOG" >&2
             exit 1
         fi
     else
-        error "analyze.sh not found"
+        error "analyze-b2c.sh not found"
         exit 1
     fi
     
-    # Generate report
-    log "Generating report..."
+    # Generate B2C report
+    log "Generating B2C report..."
     
     PASSED_COUNT=$(cat "$ANALYZED_FILE" | jq '[.products[] | select(.passed_filters == true)] | length')
-    DISCARDED_COUNT=$(cat "$ANALYZED_FILE" | jq '[.products[] | select(.passed_filters == false)] | length')
-    BLUE_OCEAN_COUNT=$(cat "$ANALYZED_FILE" | jq '[.products[] | select(.passed_filters == true and .blue_ocean_status == "green")] | length')
+    B2C_COUNT=$(cat "$ANALYZED_FILE" | jq '[.products[] | select(.is_b2c == true)] | length')
+    CHEAP_COUNT=$(cat "$ANALYZED_FILE" | jq '[.products[] | select(.passed_filters == true and .scores.maintenance_cost >= 60)] | length')
+    FAST_COUNT=$(cat "$ANALYZED_FILE" | jq '[.products[] | select(.passed_filters == true and .scores.implementation_ease >= 70)] | length')
     
     DATE_STR=$(date +"%d/%m/%Y")
     
-    # Build report header
+    # Build B2C report header
     {
-        echo "🚀 RADAR DE OPORTUNIDADES IA - $DATE_STR"
+        echo "🚀 RADAR OPORTUNIDADES B2C BRASIL - $DATE_STR"
         echo ""
         echo "📊 RESUMO"
-        echo "- $PRODUCT_COUNT produtos analisados"
-        echo "- $PASSED_COUNT passaram nos filtros"
-        echo "- $BLUE_OCEAN_COUNT oportunidades mar azul"
+        echo "• $PRODUCT_COUNT produtos analisados"
+        echo "• $B2C_COUNT focados em consumidor final (B2C)"
+        echo "• $FAST_COUNT implementáveis em < 4 semanas"
+        echo "• $CHEAP_COUNT com custo < \$30/mês"
         echo ""
-        echo "🏆 TOP 10 OPORTUNIDADES"
+        echo "🏆 TOP 10 OPORTUNIDADES B2C"
         echo ""
     } > "$REPORT_FILE_FINAL"
     
-    # Generate top 10 opportunities
+    # Generate top 10 B2C opportunities with new format
     cat "$ANALYZED_FILE" | jq -r '
         [.products[] | select(.passed_filters == true)] |
         sort_by(.final_score) | reverse | .[0:10] |
         to_entries[] |
-        "🎬 \(.key + 1)️⃣ \(.value.name) - Score: \(.value.final_score)/100
-        
-   📌 Categoria: \(.value.category // "N/A")
-   💡 O que faz: \(.value.description // "N/A")
-   🏢 Solo Founder: \(.value.scores.solo_founder)/100 \(if .value.scores.solo_founder >= 40 then "✅" else "⚠️" end)
-   🌊 Mar Azul: \(.value.blue_ocean_emoji) \(.value.blue_ocean_reason)
-   📣 Promoção: \(.value.scores.promotion)/100 (\(.value.promotion_difficulty))
-   💰 Potencial: \(.value.revenue_potential)
-   🛠 Complexidade: \(.value.technical_complexity)
-   💸 Custo infra: ~$\(.value.infra_cost)/mês
+        "🎬 \(.key + 1)️⃣ \(.value.name)
+   😰 Dor: \(.value.pain_description)
+   👥 Público: \(.value.target_audience)
+   🛠 Tempo: \(.value.implementation_time)
+   💸 Custo: \(.value.estimated_cost)
+   📱 Promoção: \(.value.promotion_channel)
+   💰 Preço: \(.value.suggested_price)
+   🌊 Concorrência: \(.value.competition.emoji) \(.value.competition.text)
    
-   ✨ Oportunidade BR:
-   \(.value.br_opportunity)
+   ✨ Por que funciona no BR:
+   \(.value.why_works_br)
    
-   🎯 Recomendação: \(.value.recommendation)
+   🎯 MVP em 2 semanas:
+   \(.value.mvp_description)
+   
+   📊 Score: \(.value.final_score)/100
+   
 "
     ' >> "$REPORT_FILE_FINAL"
     
     # Add discarded section
     {
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         echo ""
-        echo "📉 DESCARTADOS"
+        echo "📉 DESCARTADOS (e por quê)"
         echo ""
     } >> "$REPORT_FILE_FINAL"
     
     cat "$ANALYZED_FILE" | jq -r '
-        [.products[] | select(.passed_filters == false)] |
-        .[0:10][] |
+        [.products[] | select(.exclusion.excluded == true)] |
+        .[0:15][] |
         "• \(.name): \(.discard_reason)"
     ' >> "$REPORT_FILE_FINAL"
     
-    # Add footer
+    # Add recommendations section
     {
         echo ""
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        echo "🔗 Fontes: There'\''s An AI For That, Product Hunt, Reddit, Future Tools"
+        echo ""
+        echo "💡 COMEÇAR POR AQUI:"
+    } >> "$REPORT_FILE_FINAL"
+    
+    # Get top 2 for recommendations
+    cat "$ANALYZED_FILE" | jq -r '
+        [.products[] | select(.passed_filters == true)] |
+        sort_by(.final_score) | reverse | .[0:2] |
+        to_entries[] |
+        "\(.key + 1). \(.value.name) - \(if .value.scores.implementation_ease >= 70 and .value.scores.pain_brazilian >= 70 then "mais fácil + maior dor" else "segundo mais promissor" end)"
+    ' >> "$REPORT_FILE_FINAL"
+    
+    # Add promotion channels
+    {
+        echo ""
+        echo ""
+        echo "📱 CANAIS DE PROMOÇÃO ORGÂNICA:"
+        echo "• TikTok: tutoriais 30-60s mostrando resultado"
+        echo "• Instagram Reels: antes/depois"
+        echo "• Grupos Facebook/WhatsApp: nichos específicos"
+        echo "• Reddit BR / Tabnews: comunidades engajadas"
+        echo "• Product Hunt Brasil: lançamento inicial"
+        echo ""
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "🔗 Fontes: Consumer Tools, Product Hunt B2C, Reddit, Social Trends"
         echo "📅 Gerado em: $(date '+%d/%m/%Y às %H:%M')"
+        echo ""
+        echo "_"
+        echo "Foco total em B2C - consumidor final brasileiro_"
     } >> "$REPORT_FILE_FINAL"
     
     log "Report generated at: $REPORT_FILE_FINAL"
 fi
 
-# Step 3: Send report
+# ============================================
+# STEP 3: SEND REPORT
+# ============================================
+
 if [ "$SEND" = true ]; then
     if [ -n "$REPORT_FILE" ] && [ -f "$REPORT_FILE" ]; then
         REPORT_TO_SEND="$REPORT_FILE"
@@ -264,7 +306,7 @@ if [ "$SEND" = true ]; then
         exit 1
     fi
     
-    log "Sending report via Telegram..."
+    log "Sending B2C report via Telegram..."
     
     if [ -f "$SCRIPT_DIR/telegram.sh" ]; then
         if bash "$SCRIPT_DIR/telegram.sh" "$REPORT_TO_SEND"; then
@@ -279,7 +321,7 @@ if [ "$SEND" = true ]; then
     fi
 fi
 
-log "Radar completed successfully!"
+log "Radar B2C completed successfully!"
 log "Temp files available at: $TEMP_DIR"
 
 exit 0
