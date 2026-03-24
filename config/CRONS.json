@@ -108,5 +108,12 @@
     "type": "command",
     "command": "bash /app/skills/weather-bot/send-scheduled.sh 20",
     "enabled": true
+  },
+  {
+    "name": "ai-opportunity-radar",
+    "schedule": "0 9 * * 1,5",
+    "type": "command",
+    "command": "skills/active/ai-opportunity-radar/radar.sh",
+    "enabled": true
   }
 ]
