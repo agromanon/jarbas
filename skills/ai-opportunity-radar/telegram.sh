@@ -77,7 +77,6 @@ log "Report length: $REPORT_LENGTH characters"
 # Function to send message
 send_message() {
     local text="$1"
-    local parse_mode="${2:-HTML}"
     
     # Escape special characters for JSON
     local escaped_text=$(echo "$text" | jq -Rs .)
@@ -89,7 +88,6 @@ send_message() {
         -d "{
             \"chat_id\": \"${RADAR_TELEGRAM_CHAT_ID}\",
             \"text\": ${escaped_text},
-            \"parse_mode\": \"${parse_mode}\",
             \"disable_web_page_preview\": true
         }")
     
@@ -113,7 +111,7 @@ split_and_send() {
     
     if [ "$length" -le "$MAX_MESSAGE_LENGTH" ]; then
         # Send as single message
-        send_message "$content" "HTML"
+        send_message "$content"
         return $?
     fi
     
@@ -131,7 +129,7 @@ split_and_send() {
             # Send current message
             if [ -n "$current_message" ]; then
                 log "Sending part $message_num..."
-                send_message "$current_message" "HTML" || return 1
+                send_message "$current_message" || return 1
                 message_num=$((message_num + 1))
                 sleep 1  # Rate limiting
             fi
@@ -148,7 +146,7 @@ split_and_send() {
     # Send remaining content
     if [ -n "$current_message" ]; then
         log "Sending part $message_num..."
-        send_message "$current_message" "HTML" || return 1
+        send_message "$current_message" || return 1
     fi
     
     return 0
@@ -168,7 +166,7 @@ split_by_sections() {
     if [ ${#header} -gt 0 ]; then
         # Send header first
         log "Sending header..."
-        send_message "$header" "HTML" || return 1
+        send_message "$header" || return 1
         sleep 1
         
         # Remove header from content
@@ -184,7 +182,7 @@ split_by_sections() {
                 if [ -n "$current_product" ] && [ ${#current_product} -gt 100 ]; then
                     count=$((count + 1))
                     log "Sending product $count..."
-                    send_message "$current_product" "HTML" || return 1
+                    send_message "$current_product" || return 1
                     sleep 1
                 fi
                 current_product="$line"
@@ -199,7 +197,7 @@ split_by_sections() {
         if [ -n "$current_product" ]; then
             count=$((count + 1))
             log "Sending product $count and footer..."
-            send_message "$current_product" "HTML" || return 1
+            send_message "$current_product" || return 1
         fi
     else
         # Fallback to simple split

@@ -1,58 +1,78 @@
 ---
 name: ai-opportunity-radar
-description: Radar automatizado de oportunidades de IA/SaaS para o mercado brasileiro. Coleta produtos de múltiplas fontes, analisa viabilidade e envia relatório via Telegram.
+description: Radar automatizado de oportunidades B2C de IA/SaaS para o consumidor brasileiro. Foco total em produtos simples que resolvem dores do dia a dia.
 ---
 
-# AI Opportunity Radar
+# AI Opportunity Radar - B2C Brasil
 
-Radar automatizado que monitora tendências globais de IA/SaaS e identifica oportunidades específicas para o mercado brasileiro.
+Radar automatizado que encontra produtos de IA para **consumidor final brasileiro** (B2C), focando em:
+- Dores REAIS do dia a dia
+- Fácil implementação (1 pessoa, 1-4 semanas)
+- Custo baixo (< $30/mês)
+- Promoção orgânica (sem time de vendas)
+- Self-service (zero suporte)
 
 ## ⚡ Quick Start
 
-**Status**: ✅ Funcionando (testado em 2026-03-24)
+**Status**: ✅ Funcionando (refatorado 2026-03-24)
 
-1. **Configure os GitHub Secrets** (obrigatório para uso automático):
+1. **Configure os GitHub Secrets** (obrigatório):
    ```
-   AGENT_LLM_RADAR_TELEGRAM_BOT_TOKEN=8470965695:AAHOOrl_o0K8bWHgT9ZyQt53eSjeKgZEZMM
-   AGENT_LLM_RADAR_TELEGRAM_CHAT_ID=5121600266
-   ```
-
-2. **Verifique a configuração**:
-   ```bash
-   bash skills/ai-opportunity-radar/verify-config.sh
+   AGENT_LLM_RADAR_TELEGRAM_BOT_TOKEN=seu-bot-token
+   AGENT_LLM_RADAR_TELEGRAM_CHAT_ID=seu-chat-id
    ```
 
-3. **Execute o radar**:
+2. **Execute o radar**:
    ```bash
    bash skills/ai-opportunity-radar/radar.sh
    ```
 
-📖 **Guia completo de configuração**: [SETUP.md](SETUP.md)
+## 🎯 O Que Procuramos
 
-## Funcionalidades
+### ✅ INCLUDE (B2C Consumer)
 
-- **Coleta multi-fonte**: There's An AI For That, Product Hunt, Reddit, Future Tools
-- **Análise completa**: Score ponderado com 9 critérios (0-100)
-- **Filtros eliminatórios**: Remove produtos inviáveis automaticamente
-- **Análise de Mar Azul**: Investiga concorrência no Brasil
-- **Relatório formatado**: Envia TOP 10 oportunidades via Telegram
+| Categoria | Exemplos | Por que funciona |
+|-----------|----------|------------------|
+| **Geradores de conteúdo social** | Legendas Instagram, posts LinkedIn, scripts TikTok | Todo mundo quer se destacar nas redes |
+| **Assistentes pessoais** | Organizar vida, planejar semana, lembretes inteligentes | Brasileiro é desorganizado por natureza |
+| **Ferramentas para criadores** | Thumbnails, cortes de vídeo, cronograma de posts | Creator economy explodindo no BR |
+| **Geradores de documentos simples** | Contratos básicos, currículos, textos formais | Burocracia assusta, facilitadores vendem |
+| **Bots WhatsApp/Telegram** | Auto-resposta, agendamento, lembretes | WhatsApp é onipresente no BR |
+| **Ferramentas de estudo** | Resumos, flashcards, explicações | Estudantes sobrecarregados |
+| **Tradutores/ressumidores** | PDFs, artigos, vídeos em inglês | Brasileiro tem dificuldade com inglês |
+| **Geradores de imagens/vídeos** | Avatares, cartões, convites | Resultado visual = viral |
+| **Planejadores pessoais** | Viagem, dieta, exercício, finanças | Brasileiro quer melhorar mas não sabe como |
+| **Geradores de nomes/ideias** | Nomes de bebê, nomes de negócio, presentes | Criatividade não é dom de todos |
+
+### ❌ EXCLUDE (Não B2C)
+
+| Excluir | Motivo |
+|---------|--------|
+| **Infraestrutura/DevTools** | APIs, frameworks, hosting, databases |
+| **B2B Enterprise** | Vendas consultivas, contratos longos |
+| **Compete com Big Tech** | Google, Microsoft, OpenAI, Meta |
+| **Precisa de vendas/suporte** | Não é self-service |
+| **Custo > $50/mês** | Inviável para solo founder iniciante |
+| **Precisa de dados massivos** | Barreira de entrada alta |
+| **Setor regulado** | Saúde, financeiro, jurídico sério |
+| **Enterprise productivity** | Notion clone, Slack clone, etc. |
 
 ## Uso
 
 ```bash
-# Executar radar completo (coleta + análise + envio)
+# Executar radar completo
 skills/ai-opportunity-radar/radar.sh
 
 # Apenas coletar dados
 skills/ai-opportunity-radar/radar.sh --collect-only
 
-# Apenas analisar dados já coletados
+# Apenas analisar dados existentes
 skills/ai-opportunity-radar/radar.sh --analyze-only
 
-# Analisar arquivo específico de produtos
+# Analisar arquivo específico
 skills/ai-opportunity-radar/radar.sh --input /path/to/products.json
 
-# Apenas enviar relatório existente
+# Apenas enviar relatório
 skills/ai-opportunity-radar/radar.sh --send-only /path/to/report.md
 ```
 
@@ -61,99 +81,160 @@ skills/ai-opportunity-radar/radar.sh --send-only /path/to/report.md
 ```
 skills/ai-opportunity-radar/
 ├── SKILL.md              # Esta documentação
-├── radar.sh              # Script principal de orquestração
-├── analyze.sh            # Análise e scoring de produtos
-├── telegram.sh           # Envio de relatório via Telegram
-├── diagnose.sh           # Diagnóstico de problemas
-├── test-telegram.sh      # Teste de conexão Telegram
-├── find-chat-id.sh       # Descobrir chat_id correto
+├── radar.sh              # Script principal
+├── analyze-b2c.sh        # Análise B2C-focused
+├── telegram.sh           # Envio Telegram
+├── diagnose.sh           # Diagnóstico
+├── test-telegram.sh      # Teste conexão
 └── sources/
-    ├── theresanaiforthat.sh  # Coleta do There's An AI For That
-    ├── producthunt.sh        # Coleta do Product Hunt
-    ├── reddit.sh             # Coleta do Reddit
-    └── futuretools.sh        # Coleta do Future Tools
+    ├── consumer-tools.sh     # Consumer AI tools
+    ├── producthunt-b2c.sh    # Product Hunt (consumer filter)
+    ├── reddit-painpoints.sh  # Reddit dores reais
+    └── social-trends.sh      # TikTok/social trends
 ```
 
-## Critérios de Análise
+## Critérios de Análise B2C
 
-| Critério | Peso | O que avaliar |
-|----------|------|---------------|
-| Viabilidade Solo Founder | 15% | APIs prontas? Self-serve? Automatizável? |
-| Facilidade de Promoção | 15% | SEO? Orgânico? Nichos engajados? |
-| Concorrência BR / Mar Azul | 15% | Já existe no Brasil? É bom? |
-| Dor Real/Latente BR | 15% | Resolve problema genuíno? |
-| Inovação | 10% | Disruptivo ou cópia? |
-| Potencial de Receita | 10% | TAM no BR, B2B/B2C, pricing |
-| Complexidade Técnica | 10% | Viável com IA? APIs disponíveis? |
-| Custo de Manutenção | 5% | Infra estimada, APIs pagas |
-| Aderência Cultural BR | 5% | Idioma, pagamentos, comportamento |
+| Critério | Peso | Pergunta Chave |
+|----------|------|----------------|
+| **Dor do brasileiro** | 25% | Brasileiro comum TEM esse problema no dia a dia? |
+| **Facilidade de implementação** | 25% | 1 pessoa constrói em 1-4 semanas? |
+| **Custo de manutenção** | 15% | < $30/mês total (server + APIs)? |
+| **Facilidade de promoção** | 15% | Orgânico no TikTok/Instagram? Boca a boca? |
+| **Concorrência BR** | 10% | Não existe ou é mal executado? |
+| **Monetização B2C clara** | 10% | Usuário paga R$19-49/mês ou R$29-99 único? |
 
-## Filtros Eliminatórios
+## Filtros Eliminatórios B2C
 
-Produtos são descartados automaticamente se:
-- Score Solo Founder < 40
-- Mar Vermelho confirmado (3+ concorrentes fortes no BR)
-- Promoção 100% dependente de paid media
-- Custo infra estimado > $200/mês para começar
-- Precisa de licença/regulação (saúde, financeiro, jurídico)
+Produto é DESCARTADO automaticamente se:
 
-## Requisitos
+| Filtro | Motivo |
+|--------|--------|
+| `is_b2c = false` | Não é voltado para consumidor final |
+| `is_infrastructure = true` | É infra/DevTool |
+| `is_enterprise = true` | Precisa de vendas consultivas |
+| `competes_with_big_tech = true` | Google/Microsoft/OpenAI/Meta já fazem |
+| `needs_sales_team = true` | Não é self-service |
+| `maintenance_cost > 50` | Custo > $50/mês para começar |
+| `is_regulated = true` | Saúde, financeiro, jurídico |
+| `implementation_weeks > 4` | Mais de 4 semanas para MVP |
 
-- `curl` - Para scraping e API calls
-- `jq` - Para parsing de JSON
-- `grep`, `sed`, `awk` - Para parsing de HTML/texto
-- Variáveis de ambiente (veja seção Configuração)
+## Análise de Viabilidade B2C
+
+Para cada produto, o radar avalia:
+
+### 1. Implementação
+- **APIs prontas**: OpenAI, Replicate, etc.
+- **Banco de dados**: Precisa? Supabase free tier basta?
+- **Autenticação**: NextAuth simples ou sem auth?
+- **Stack**: React/Next.js básico funciona?
+
+### 2. Custo Mensal Estimado
+```
+Hosting:     Vercel/Netlify     $0-20
+APIs:        OpenAI/Replicate   $10-30
+Database:    Supabase           $0
+Storage:     Cloudflare R2      $0-5
+─────────────────────────────────────
+TOTAL:                          $10-55 (aceitável: <$30)
+```
+
+### 3. Promoção Orgânica
+- **TikTok**: Vídeo 30-60s mostrando resultado
+- **Instagram Reels**: Antes/depois
+- **Boca a boca**: Compartilhável?
+- **SEO**: Busca orgânica funciona?
+- **Comunidades**: Grupos Facebook/WhatsApp/Reddit
+
+### 4. Concorrência Real no BR
+- Google: "[produto] brasil", "[funcionalidade] online gratis"
+- TikTok: Buscar vídeos sobre o tema
+- Avaliar: Existe? É bom? É caro? É em inglês?
+
+## Formato do Relatório
+
+```
+🚀 RADAR OPORTUNIDADES B2C BRASIL - [DATA]
+
+📊 RESUMO
+• XX produtos analisados
+• XX focados em consumidor final (B2C)
+• XX implementáveis em < 4 semanas
+• XX com custo < $30/mês
+
+🏆 TOP 10 OPORTUNIDADES B2C
+
+1️⃣ [Nome da ideia/produto]
+   😰 Dor: [dor específica do brasileiro - 1 frase]
+   👥 Público: [ex: "Estudantes universitários"]
+   🛠 Tempo: [1-2 semanas / 3-4 semanas]
+   💸 Custo: ~$XX/mês
+   📱 Promoção: [TikTok / Instagram / Boca a boca / SEO]
+   💰 Preço: R$XX/mês ou R$XX único
+   🌊 Concorrência: [🟢 Nenhuma / 🟡 Ruim / 🔴 Saturado]
+   
+   ✨ Por que funciona no BR:
+   [2 frases sobre aderência cultural, timing, oportunidade]
+   
+   🎯 MVP em 2 semanas:
+   [Feature mínima viável]
+
+2️⃣ ...
+
+📉 DESCARTADOS (e por quê)
+• [Produto]: B2B complexo, precisa de vendas
+• [Produto]: Infraestrutura cara, > $100/mês
+
+💡 COMEÇAR POR AQUI:
+1. [Top 1] - [motivo: mais fácil + maior dor]
+2. [Top 2] - [motivo: segundo mais promissor]
+
+📱 CANAIS DE PROMOÇÃO ORGÂNICA:
+• TikTok: tutoriais 30-60s
+• Instagram Reels: antes/depois
+• Grupos Facebook/WhatsApp
+• Reddit BR / Tabnews
+• Product Hunt Brasil
+
+🔗 Fontes: [lista de fontes]
+```
+
+## Exemplos de Oportunidades B2C
+
+| Ideia | Dor | Tempo | Custo | Promoção |
+|-------|-----|-------|-------|----------|
+| Gerador de legendas Instagram | Social media perde tempo | 1-2 sem | $20/mês | TikTok viral |
+| Resumidor de PDFs para estudo | Estudantes sobrecarregados | 1 sem | $15/mês | Grupos faculdade |
+| Gerador de posts LinkedIn | Profissional quer se destacar | 2 sem | $20/mês | LinkedIn orgânico |
+| Bot WhatsApp pequeno comércio | Comércio não atende 24h | 2-3 sem | $10/mês | Boca a boca |
+| Gerador de scripts TikTok | Criador não sabe o que falar | 1 sem | $15/mês | TikTok itself |
+| Planejador de dieta simples | Brasileiro quer emagrecer | 2 sem | $20/mês | Influencers fitness |
+| Gerador de currículo otimizado | Desempregado precisa de CV | 1 sem | $10/mês | Grupos emprego |
+| Criador de cardápio digital | Restaurante quer cardápio bonito | 1 sem | $5/mês | Indicação donos |
 
 ## Configuração
 
 ### Variáveis de Ambiente
 
-O script aceita duas opções de configuração:
-
-**Opção 1: Variáveis específicas do Radar (recomendado)**
-
 | Variável | Descrição |
-|----------|-------------|
-| `RADAR_TELEGRAM_BOT_TOKEN` | Token do bot Telegram do @BotFather |
-| `RADAR_TELEGRAM_CHAT_ID` | Chat ID para receber relatórios |
+|----------|-----------|
+| `RADAR_TELEGRAM_BOT_TOKEN` | Token do bot Telegram |
+| `RADAR_TELEGRAM_CHAT_ID` | Chat ID para relatórios |
 
-**Opção 2: Variáveis globais (fallback)**
+### GitHub Secrets
 
-| Variável | Descrição |
-|----------|-------------|
-| `TELEGRAM_BOT_TOKEN` | Token do bot Telegram global |
-| `TELEGRAM_CHAT_ID` | Chat ID global para notificações |
-
-### Configuração via GitHub Secrets
-
-Para que as variáveis estejam disponíveis no container do agente, configure como GitHub Secrets com o prefixo `AGENT_LLM_`:
+Configure com prefixo `AGENT_LLM_`:
 
 ```
-AGENT_LLM_RADAR_TELEGRAM_BOT_TOKEN=seu-bot-token
+AGENT_LLM_RADAR_TELEGRAM_BOT_TOKEN=seu-token
 AGENT_LLM_RADAR_TELEGRAM_CHAT_ID=seu-chat-id
 ```
 
-Ou use as variáveis globais:
-
-```
-AGENT_LLM_TELEGRAM_BOT_TOKEN=seu-bot-token
-AGENT_LLM_TELEGRAM_CHAT_ID=seu-chat-id
-```
-
-### Como Descobrir seu Chat ID
-
-1. **Abra o Telegram** e inicie uma conversa com seu bot
-2. **Use @userinfobot** - envie `/start` e ele retornará seu ID
-3. **Ou acesse a API**: `https://api.telegram.org/bot<TOKEN>/getUpdates`
-4. **Procure por**: `"chat":{"id":SEU_CHAT_ID`
-
 ### Cron Job
-
-Configurado em `config/CRONS.json`:
 
 ```json
 {
-  "name": "ai-opportunity-radar",
+  "name": "ai-opportunity-radar-b2c",
   "schedule": "0 9 * * 1,5",
   "enabled": true,
   "type": "command",
@@ -161,122 +242,35 @@ Configurado em `config/CRONS.json`:
 }
 ```
 
-Executa às 9h nas segundas e sextas-feiras.
-
-## Diagnóstico e Testes
-
-### Verificar Configuração
+## Diagnóstico
 
 ```bash
-# Diagnóstico completo
+# Verificar configuração
 skills/ai-opportunity-radar/diagnose.sh
 
-# Testar conexão Telegram
+# Testar Telegram
 skills/ai-opportunity-radar/test-telegram.sh
-
-# Descobrir chat_id
-skills/ai-opportunity-radar/find-chat-id.sh
-```
-
-### Problemas Comuns
-
-**Erro: "chat not found"**
-
-Causa: O bot não pode enviar mensagens para o chat_id fornecido.
-
-Solução:
-1. Abra o Telegram e procure pelo seu bot
-2. Clique em "Start" para iniciar uma conversa
-3. Descubra seu chat_id correto usando `find-chat-id.sh` ou @userinfobot
-4. Atualize a variável `RADAR_TELEGRAM_CHAT_ID`
-
-**Erro: "variável não definida"**
-
-Causa: As variáveis de ambiente não foram configuradas.
-
-Solução:
-1. Configure os GitHub Secrets com prefixo `AGENT_LLM_`
-2. Ou exporte as variáveis manualmente para testes
-
-## Saída
-
-Relatório formatado enviado via Telegram com:
-
-```
-🚀 RADAR DE OPORTUNIDADES IA - [DATA]
-
-📊 RESUMO
-- XX produtos analisados
-- XX passaram nos filtros
-- XX oportunidades mar azul
-
-🏆 TOP 10 OPORTUNIDADES
-
-1️⃣ [Nome] - Score: XX/100
-   📌 Categoria: [categoria]
-   💡 O que faz: [descrição]
-   🏢 Solo Founder: XX/100 ✅
-   🌊 Mar Azul: 🟢 [explicação]
-   📣 Promoção: XX/100 [fácil/médio]
-   💰 Potencial: [B2B/B2C, pricing]
-   🛠 Complexidade: [baixa/média/alta]
-   💸 Custo infra: ~$XX/mês
-   
-   ✨ Oportunidade BR:
-   [Análise específica]
-   
-   🎯 Recomendação: [ação sugerida]
-
-[... 2-10]
-
-📉 DESCARTADOS
-- [Produto]: [motivo]
-
-🔗 Fontes: There's An AI For That, Product Hunt, Reddit, Future Tools
 ```
 
 ## Debug
 
-O script gera logs em `/tmp/radar-YYYYMMDD-HHMMSS/`:
+Logs salvos em `/tmp/radar-YYYYMMDD-HHMMSS/`:
 - `collect.log` - Log da coleta
 - `analyze.log` - Log da análise
-- `products.json` - Produtos coletados (raw)
-- `analyzed.json` - Produtos analisados com scores
+- `products.json` - Produtos coletados
+- `analyzed.json` - Produtos analisados
 - `report.md` - Relatório final
 
 ## Quando Usar
 
-- Descoberta de oportunidades de negócio em IA/SaaS
-- Análise de tendências globais com foco no Brasil
-- Identificação de nichos com baixa concorrência
+- Descoberta de produtos B2C em IA
 - Validação de ideias antes de desenvolver
-- Monitoramento contínuo do mercado de IA
+- Identificação de nichos com baixa concorrência no BR
+- Monitoramento de tendências consumer
 
 ## Fontes de Dados
 
-1. **There's An AI For That** (theresanaiforthat.com)
-   - Categorias em alta
-   - Produtos novos
-   - Trending
-
-2. **Product Hunt** (producthunt.com)
-   - Lançamentos de IA dos últimos 7 dias
-   - Upvotes e comentários
-   - Featured products
-
-3. **Reddit** (reddit.com)
-   - r/SaaS - Discussões de SaaS
-   - r/artificial - Tendências de IA
-   - Posts sobre dores e soluções
-
-4. **Future Tools** (futuretools.io)
-   - Ferramentas emergentes por categoria
-   - Novas adições
-   - Trending tools
-
-## Notas Importantes
-
-- Scripts usam scraping respeitoso com delays entre requests
-- Rate limiting implementado para evitar bloqueios
-- Dados coletados são temporários (não persistem entre execuções)
-- Análise de concorrência é indicativa, não exaustiva
+1. **There's An AI For That** - Categorias consumer
+2. **Product Hunt** - AI + Consumer (não DevTools)
+3. **Reddit** - Dores reais de usuários
+4. **TikTok Trends** - Ferramentas viralizando
