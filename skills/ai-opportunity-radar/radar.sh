@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# AI Opportunity Radar - Main orchestration script
-# Coleta, analisa e envia relatório de oportunidades IA para o mercado BR
+# AI Opportunity Radar - Main orchestration script (B2C Focus)
+# Coleta, analisa e envia relatório de oportunidades B2C para o mercado BR
 #
 
 set -e
@@ -149,7 +149,7 @@ fi
 
 # Step 2: Analyze products
 if [ "$ANALYZE" = true ]; then
-    log "Starting analysis..."
+    log "Starting B2C analysis..."
     
     # Use input file if provided, otherwise use collected products
     if [ -n "$INPUT_PRODUCTS" ] && [ -f "$INPUT_PRODUCTS" ]; then
@@ -171,7 +171,7 @@ if [ "$ANALYZE" = true ]; then
     
     if [ -f "$SCRIPT_DIR/analyze.sh" ]; then
         if bash "$SCRIPT_DIR/analyze.sh" "$PRODUCTS_FILE" "$ANALYZED_FILE" >> "$ANALYZE_LOG" 2>&1; then
-            log "✓ Analysis completed"
+            log "✓ B2C analysis completed"
         else
             error "Analysis failed"
             cat "$ANALYZE_LOG" >&2
@@ -182,73 +182,106 @@ if [ "$ANALYZE" = true ]; then
         exit 1
     fi
     
-    # Generate report
-    log "Generating report..."
+    # Generate B2C-focused report
+    log "Generating B2C report..."
     
     PASSED_COUNT=$(cat "$ANALYZED_FILE" | jq '[.products[] | select(.passed_filters == true)] | length')
     DISCARDED_COUNT=$(cat "$ANALYZED_FILE" | jq '[.products[] | select(.passed_filters == false)] | length')
     BLUE_OCEAN_COUNT=$(cat "$ANALYZED_FILE" | jq '[.products[] | select(.passed_filters == true and .blue_ocean_status == "green")] | length')
+    QUICK_WINS=$(cat "$ANALYZED_FILE" | jq '[.products[] | select(.passed_filters == true and .scores.implementation >= 75)] | length')
     
     DATE_STR=$(date +"%d/%m/%Y")
     
-    # Build report header
+    # Build B2C report header
     {
-        echo "🚀 RADAR DE OPORTUNIDADES IA - $DATE_STR"
+        echo "🚀 RADAR DE OPORTUNIDADES B2C BR - $DATE_STR"
         echo ""
         echo "📊 RESUMO"
-        echo "- $PRODUCT_COUNT produtos analisados"
-        echo "- $PASSED_COUNT passaram nos filtros"
-        echo "- $BLUE_OCEAN_COUNT oportunidades mar azul"
+        echo "• $PRODUCT_COUNT produtos analisados"
+        echo "• $PASSED_COUNT focados em B2C consumidor final"
+        echo "• $QUICK_WINS com implementação < 4 semanas"
+        echo "• $BLUE_OCEAN_COUNT mar azul real no BR"
         echo ""
-        echo "🏆 TOP 10 OPORTUNIDADES"
+        echo "🏆 TOP 10 OPORTUNIDADES B2C"
         echo ""
     } > "$REPORT_FILE_FINAL"
     
-    # Generate top 10 opportunities
+    # Generate top 10 B2C opportunities
     cat "$ANALYZED_FILE" | jq -r '
         [.products[] | select(.passed_filters == true)] |
         sort_by(.final_score) | reverse | .[0:10] |
         to_entries[] |
-        "🎬 \(.key + 1)️⃣ \(.value.name) - Score: \(.value.final_score)/100
-        
-   📌 Categoria: \(.value.category // "N/A")
-   💡 O que faz: \(.value.description // "N/A")
-   🏢 Solo Founder: \(.value.scores.solo_founder)/100 \(if .value.scores.solo_founder >= 40 then "✅" else "⚠️" end)
-   🌊 Mar Azul: \(.value.blue_ocean_emoji) \(.value.blue_ocean_reason)
-   📣 Promoção: \(.value.scores.promotion)/100 (\(.value.promotion_difficulty))
-   💰 Potencial: \(.value.revenue_potential)
-   🛠 Complexidade: \(.value.technical_complexity)
+        "🎬 \(.key + 1)️⃣ \(.value.name)
+   💡 O que é: \(.value.description[:100])
+   😰 Dor que resolve: \(.value.target_audience)
+   👥 Público: \(.value.target_audience)
+   🛠 Implementação: \(.value.implementation_time)
    💸 Custo infra: ~$\(.value.infra_cost)/mês
+   📱 Promoção: \(.value.promotion_difficulty)
+   💰 Modelo: \(.value.revenue_model)
+   🌊 Concorrência BR: \(.value.blue_ocean_emoji) \(.value.blue_ocean_reason)
+   🏢 Solo founder: \(if .value.scores.implementation >= 60 then "✅ Sim" else "⚠️ Complexo" end)
+   ⭐ Score: \(.value.final_score)/100
    
-   ✨ Oportunidade BR:
+   ✨ Por que funciona no BR:
    \(.value.br_opportunity)
    
-   🎯 Recomendação: \(.value.recommendation)
+   🎯 Próximos passos:
+   \(.value.next_steps)
 "
     ' >> "$REPORT_FILE_FINAL"
     
     # Add discarded section
     {
         echo ""
-        echo "📉 DESCARTADOS"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo ""
+        echo "📉 DESCARTADOS E POR QUÊ"
         echo ""
     } >> "$REPORT_FILE_FINAL"
     
     cat "$ANALYZED_FILE" | jq -r '
         [.products[] | select(.passed_filters == false)] |
-        .[0:10][] |
+        .[0:15][] |
         "• \(.name): \(.discard_reason)"
     ' >> "$REPORT_FILE_FINAL"
     
-    # Add footer
+    # Add monetization ideas
     {
         echo ""
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        echo "🔗 Fontes: There'\''s An AI For That, Product Hunt, Reddit, Future Tools"
-        echo "📅 Gerado em: $(date '+%d/%m/%Y às %H:%M')"
+        echo ""
+        echo "💰 IDEIAS DE MONETIZAÇÃO B2C"
+        echo ""
+        echo "• Freemium básico gratuito + premium R$19-29/mês"
+        echo "• One-time payment R$29-49 (lifetime access)"
+        echo "• Créditos pré-pagos (R$10 = 100 usos)"
+        echo "• Assinatura anual com desconto (2 meses grátis)"
+        echo ""
     } >> "$REPORT_FILE_FINAL"
     
-    log "Report generated at: $REPORT_FILE_FINAL"
+    # Add organic promotion channels
+    {
+        echo "📱 CANAIS DE PROMOÇÃO ORGÂNICA"
+        echo ""
+        echo "• TikTok (tutoriais, antes/depois, dicas rápidas)"
+        echo "• Instagram Reels (demonstrações, cases de uso)"
+        echo "• Grupos de Facebook/WhatsApp (nichos específicos)"
+        echo "• Fóruns (Reddit BR, Tabnews, Gumroad)"
+        echo "• Product Hunt Brasil (lançamento)"
+        echo "• YouTube Shorts (tutoriais em 60s)"
+        echo ""
+    } >> "$REPORT_FILE_FINAL"
+    
+    # Add footer
+    {
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "🔗 Fontes analisadas: There's An AI For That, Product Hunt, Reddit, Future Tools"
+        echo "📅 Gerado em: $(date '+%d/%m/%Y às %H:%M')"
+        echo "🎯 Foco: B2C consumidor final brasileiro"
+    } >> "$REPORT_FILE_FINAL"
+    
+    log "B2C report generated at: $REPORT_FILE_FINAL"
 fi
 
 # Step 3: Send report
@@ -264,7 +297,7 @@ if [ "$SEND" = true ]; then
         exit 1
     fi
     
-    log "Sending report via Telegram..."
+    log "Sending B2C report via Telegram..."
     
     if [ -f "$SCRIPT_DIR/telegram.sh" ]; then
         if bash "$SCRIPT_DIR/telegram.sh" "$REPORT_TO_SEND"; then

@@ -1,20 +1,20 @@
 ---
 name: ai-opportunity-radar
-description: Radar automatizado de oportunidades de IA/SaaS para o mercado brasileiro. Coleta produtos de múltiplas fontes, analisa viabilidade e envia relatório via Telegram.
+description: Radar automatizado de oportunidades B2C de IA para o mercado brasileiro. Foco em consumidor final, produtos simples de implementar e manter, com promoção orgânica via TikTok/Instagram.
 ---
 
-# AI Opportunity Radar
+# AI Opportunity Radar (B2C Focus)
 
-Radar automatizado que monitora tendências globais de IA/SaaS e identifica oportunidades específicas para o mercado brasileiro.
+Radar automatizado que monitora tendências globais de IA e identifica oportunidades **B2C** específicas para o mercado brasileiro.
 
 ## ⚡ Quick Start
 
-**Status**: ✅ Funcionando (testado em 2026-03-24)
+**Status**: ✅ Funcionando (refatorado para B2C em 2026-03-24)
 
 1. **Configure os GitHub Secrets** (obrigatório para uso automático):
    ```
-   AGENT_LLM_RADAR_TELEGRAM_BOT_TOKEN=8470965695:AAHOOrl_o0K8bWHgT9ZyQt53eSjeKgZEZMM
-   AGENT_LLM_RADAR_TELEGRAM_CHAT_ID=5121600266
+   AGENT_LLM_RADAR_TELEGRAM_BOT_TOKEN=seu-bot-token
+   AGENT_LLM_RADAR_TELEGRAM_CHAT_ID=seu-chat-id
    ```
 
 2. **Verifique a configuração**:
@@ -29,13 +29,40 @@ Radar automatizado que monitora tendências globais de IA/SaaS e identifica opor
 
 📖 **Guia completo de configuração**: [SETUP.md](SETUP.md)
 
+## 🎯 Foco B2C
+
+Este radar foi otimizado para encontrar oportunidades de **consumidor final** (B2C), não B2B enterprise.
+
+### O que PROCURAMOS:
+
+✅ **Geradores de conteúdo** (posts, legendas, textos)
+✅ **Assistentes pessoais simples**
+✅ **Ferramentas de produtividade**
+✅ **Geradores de documentos/contratos simples**
+✅ **Bots para WhatsApp/Telegram**
+✅ **Ferramentas para criadores de conteúdo**
+✅ **Soluções para pequenos comércios** (autoatendimento)
+✅ **Tradutores/ressumidores** adaptados para BR
+✅ **Ferramentas de estudo/aprendizado**
+✅ **Geradores de imagens/vídeos simples**
+
+### O que EXCLUÍMOS:
+
+❌ Infraestrutura/plataformas de dev (APIs, frameworks, hosting)
+❌ Produtos enterprise/B2B complexos
+❌ Coisas que competem com Google, Microsoft, OpenAI
+❌ Produtos que precisam de equipe de vendas/suporte
+❌ Produtos com custo de manutenção > $50/mês
+❌ Produtos que precisam de dados proprietários massivos
+❌ Produtos regulados (saúde, financeiro, jurídico)
+
 ## Funcionalidades
 
 - **Coleta multi-fonte**: There's An AI For That, Product Hunt, Reddit, Future Tools
-- **Análise completa**: Score ponderado com 9 critérios (0-100)
-- **Filtros eliminatórios**: Remove produtos inviáveis automaticamente
-- **Análise de Mar Azul**: Investiga concorrência no Brasil
-- **Relatório formatado**: Envia TOP 10 oportunidades via Telegram
+- **Filtro B2C rigoroso**: Remove automaticamente infraestrutura e B2B
+- **Análise ponderada**: 7 critérios focados em consumidor final brasileiro
+- **Mar Azul BR**: Identifica produtos com pouca ou nenhuma concorrência no Brasil
+- **Relatório prático**: TOP 10 com próximos passos concretos
 
 ## Uso
 
@@ -61,8 +88,8 @@ skills/ai-opportunity-radar/radar.sh --send-only /path/to/report.md
 ```
 skills/ai-opportunity-radar/
 ├── SKILL.md              # Esta documentação
-├── radar.sh              # Script principal de orquestração
-├── analyze.sh            # Análise e scoring de produtos
+├── radar.sh              # Script principal de orquestração (B2C)
+├── analyze.sh            # Análise e scoring de produtos (B2C)
 ├── telegram.sh           # Envio de relatório via Telegram
 ├── diagnose.sh           # Diagnóstico de problemas
 ├── test-telegram.sh      # Teste de conexão Telegram
@@ -74,34 +101,37 @@ skills/ai-opportunity-radar/
     └── futuretools.sh        # Coleta do Future Tools
 ```
 
-## Critérios de Análise
+## Critérios de Análise (B2C)
 
 | Critério | Peso | O que avaliar |
 |----------|------|---------------|
-| Viabilidade Solo Founder | 15% | APIs prontas? Self-serve? Automatizável? |
-| Facilidade de Promoção | 15% | SEO? Orgânico? Nichos engajados? |
-| Concorrência BR / Mar Azul | 15% | Já existe no Brasil? É bom? |
-| Dor Real/Latente BR | 15% | Resolve problema genuíno? |
-| Inovação | 10% | Disruptivo ou cópia? |
-| Potencial de Receita | 10% | TAM no BR, B2B/B2C, pricing |
-| Complexidade Técnica | 10% | Viável com IA? APIs disponíveis? |
-| Custo de Manutenção | 5% | Infra estimada, APIs pagas |
-| Aderência Cultural BR | 5% | Idioma, pagamentos, comportamento |
+| **Dor do brasileiro** | 20% | Problema real do dia a dia? Brasileiro tem essa dor? |
+| **Facilidade de implementação** | 20% | Dá pra fazer em 1-4 semanas sozinho? APIs prontas? |
+| **Custo de manutenção** | 15% | < $30/mês? Server barato + APIs? |
+| **Facilidade de promoção** | 15% | Orgânico? TikTok/Instagram? Viral? |
+| **Concorrência BR** | 15% | Mar azul ou concorrentes ruins? |
+| **Monetização clara** | 10% | Usuário paga quanto? $5-29/mês? |
+| **Zero suporte/vendas** | 5% | Self-service total? |
 
-## Filtros Eliminatórios
+## Filtros Eliminatórios (B2C)
 
 Produtos são descartados automaticamente se:
-- Score Solo Founder < 40
-- Mar Vermelho confirmado (3+ concorrentes fortes no BR)
-- Promoção 100% dependente de paid media
-- Custo infra estimado > $200/mês para começar
-- Precisa de licença/regulação (saúde, financeiro, jurídico)
+
+- ❌ **Infraestrutura/plataforma dev** (APIs, SDKs, frameworks, hosting)
+- ❌ **B2B/Enterprise complexo** (precisa de vendas consultivas)
+- ❌ **Compete com big techs** (Google, Microsoft, OpenAI, etc.)
+- ❌ **Mar vermelho confirmado** (concorrência forte no BR)
+- ❌ **Não resolve dor do brasileiro** (score < 35/100)
+- ❌ **Muito complexo para solo founder** (implementação < 40/100)
+- ❌ **Custo infra alto** (>$50/mês)
+- ❌ **Setor regulamentado** (saúde, financeiro, jurídico)
+- ❌ **Precisa de vendas/suporte intensivo** (não é self-service)
 
 ## Requisitos
 
 - `curl` - Para scraping e API calls
 - `jq` - Para parsing de JSON
-- `grep`, `sed`, `awk` - Para parsing de HTML/texto
+- `grep`, `sed`, `awk` - Para parsing de texto
 - Variáveis de ambiente (veja seção Configuração)
 
 ## Configuração
@@ -203,36 +233,57 @@ Solução:
 Relatório formatado enviado via Telegram com:
 
 ```
-🚀 RADAR DE OPORTUNIDADES IA - [DATA]
+🚀 RADAR DE OPORTUNIDADES B2C BR - [DATA]
 
 📊 RESUMO
-- XX produtos analisados
-- XX passaram nos filtros
-- XX oportunidades mar azul
+• XX produtos analisados
+• XX focados em B2C consumidor final
+• XX com implementação < 4 semanas
+• XX mar azul real no BR
 
-🏆 TOP 10 OPORTUNIDADES
+🏆 TOP 10 OPORTUNIDADES B2C
 
-1️⃣ [Nome] - Score: XX/100
-   📌 Categoria: [categoria]
-   💡 O que faz: [descrição]
-   🏢 Solo Founder: XX/100 ✅
-   🌊 Mar Azul: 🟢 [explicação]
-   📣 Promoção: XX/100 [fácil/médio]
-   💰 Potencial: [B2B/B2C, pricing]
-   🛠 Complexidade: [baixa/média/alta]
+1️⃣ [Nome do produto]
+   💡 O que é: [1 frase clara]
+   😰 Dor que resolve: [dor específica do brasileiro]
+   👥 Público: [quem usa - ex: "estudantes universitários BR"]
+   🛠 Implementação: [1-2 semanas / 3-4 semanas]
    💸 Custo infra: ~$XX/mês
+   📱 Promoção: [como divulgar - ex: "TikTok orgânico, influencers"]
+   💰 Modelo: [ex: "Freemium R$19,90/mês"]
+   🌊 Concorrência BR: [🟢 Nenhuma / 🟡 Existe mas é ruim / 🔴 Saturado]
+   🏢 Solo founder: ✅ Sim / ❌ Precisa de time
+   ⭐ Score: XX/100
    
-   ✨ Oportunidade BR:
-   [Análise específica]
+   ✨ Por que funciona no BR:
+   [2-3 frases explicando aderência cultural, timing, oportunidade]
    
-   🎯 Recomendação: [ação sugerida]
+   🎯 Próximos passos:
+   [Ação concreta - ex: "Criar MVP em 2 semanas, testar com 100 usuários"]
 
 [... 2-10]
 
-📉 DESCARTADOS
-- [Produto]: [motivo]
+📉 DESCARTADOS E POR QUÊ
+• [Produto]: [motivo - ex: "B2B complexo", "Infra cara", "Concorre com Google"]
 
+💰 IDEIAS DE MONETIZAÇÃO
+• Freemium básico gratuito + premium R$19-29/mês
+• One-time payment R$29-49 (lifetime access)
+• Créditos pré-pagos (R$10 = 100 usos)
+• Assinatura anual com desconto (2 meses grátis)
+
+📱 CANAIS DE PROMOÇÃO ORGÂNICA
+• TikTok (tutoriais, antes/depois, dicas rápidas)
+• Instagram Reels (demonstrações, cases de uso)
+• Grupos de Facebook/WhatsApp (nichos específicos)
+• Fóruns (Reddit BR, Tabnews, Gumroad)
+• Product Hunt Brasil (lançamento)
+• YouTube Shorts (tutoriais em 60s)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🔗 Fontes: There's An AI For That, Product Hunt, Reddit, Future Tools
+📅 Gerado em: DD/MM/YYYY às HH:MM
+🎯 Foco: B2C consumidor final brasileiro
 ```
 
 ## Debug
@@ -246,33 +297,48 @@ O script gera logs em `/tmp/radar-YYYYMMDD-HHMMSS/`:
 
 ## Quando Usar
 
-- Descoberta de oportunidades de negócio em IA/SaaS
-- Análise de tendências globais com foco no Brasil
-- Identificação de nichos com baixa concorrência
+- Descoberta de oportunidades de negócio B2C em IA
+- Identificação de produtos para solo founder
 - Validação de ideias antes de desenvolver
-- Monitoramento contínuo do mercado de IA
+- Monitoramento de tendências com foco em consumidor final brasileiro
+- Busca por produtos com baixo custo de manutenção e promoção orgânica
 
 ## Fontes de Dados
 
 1. **There's An AI For That** (theresanaiforthat.com)
-   - Categorias em alta
+   - Categorias consumer-friendly
    - Produtos novos
    - Trending
 
 2. **Product Hunt** (producthunt.com)
    - Lançamentos de IA dos últimos 7 dias
    - Upvotes e comentários
-   - Featured products
+   - Filtro para produtos B2C
 
 3. **Reddit** (reddit.com)
    - r/SaaS - Discussões de SaaS
    - r/artificial - Tendências de IA
-   - Posts sobre dores e soluções
+   - Posts sobre dores de usuários comuns
 
 4. **Future Tools** (futuretools.io)
    - Ferramentas emergentes por categoria
    - Novas adições
    - Trending tools
+
+## Exemplos de Oportunidades Ideais
+
+Para referência, oportunidades B2C que fazem sentido:
+
+- "Gerador de legendas para Instagram com emojis e hashtags"
+- "Resumidor de PDFs para estudantes universitários"
+- "Gerador de posts para LinkedIn focado em profissionais BR"
+- "Bot de WhatsApp que responde FAQ de pequenos comércios"
+- "Gerador de contratos de aluguel simples"
+- "Assistente para criar currículos otimizados para vagas BR"
+- "Gerador de ideias de nomes para negócios/nomes de domínio"
+- "Tradutor que adapta textos para português brasileiro informal"
+- "Gerador de scripts para vídeos de TikTok/Reels"
+- "Ferramenta para criar cardápios de restaurantes pequenos"
 
 ## Notas Importantes
 
@@ -280,3 +346,7 @@ O script gera logs em `/tmp/radar-YYYYMMDD-HHMMSS/`:
 - Rate limiting implementado para evitar bloqueios
 - Dados coletados são temporários (não persistem entre execuções)
 - Análise de concorrência é indicativa, não exaustiva
+- **Foco 100% B2C**: Infraestrutura e B2B são automaticamente filtrados
+- **Solo founder friendly**: Prioriza produtos implementáveis por 1 pessoa
+- **Custo baixo**: Mantém infra <$50/mês, ideal <$30/mês
+- **Promoção orgânica**: Prefere produtos que viralizam no TikTok/Instagram
