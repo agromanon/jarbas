@@ -1,5 +1,5 @@
-import { JobsPage } from 'thepopebot/chat';
+import { RunnersPage } from 'thepopebot/chat';
 
 export default async function RunnersRoute() {
-  return <JobsPage />;
+  return <RunnersPage />;
 }
