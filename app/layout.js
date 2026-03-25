@@ -14,11 +14,6 @@ export const viewport = {
   viewportFit: 'cover',
 };
 
-const features = {
-  codeWorkspace: !!process.env.CLAUDE_CODE_OAUTH_TOKEN,
-  clusterWorkspace: !!process.env.CLAUDE_CODE_OAUTH_TOKEN,
-};
-
 export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
