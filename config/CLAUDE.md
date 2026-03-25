@@ -8,17 +8,14 @@ This directory contains all user-editable configuration files. These files are *
 
 | File | Used By | Purpose |
 |------|---------|---------|
-| `SOUL.md` | Chat + Jobs | Agent personality, identity, and values. Included in all LLM interactions. |
-| `JOB_PLANNING.md` | Event handler | System prompt for the event handler LLM when planning jobs from chat. |
-| `JOB_AGENT.md` | Docker agent | Runtime environment documentation injected into the agent's context. |
-| `JOB_SUMMARY.md` | Docker agent | Prompt template for summarizing completed job results. |
-| `CODE_PLANNING.md` | Code workspaces | System prompt for the planning chat in interactive code workspaces. |
+| `agent-chat/SYSTEM.md` | Event handler | System prompt for the agent chat (job planning from web/Telegram). |
+| `code-chat/SYSTEM.md` | Code workspaces | System prompt for the planning chat in interactive code workspaces. |
+| `agent-job/SOUL.md` | Docker agent | Agent personality, identity, and values. Included in agent job system prompts. |
+| `agent-job/AGENT_JOB.md` | Docker agent | Runtime environment documentation injected into the agent's context. |
+| `agent-job/SUMMARY.md` | Docker agent | Prompt template for summarizing completed job results. |
+| `cluster/SYSTEM.md` | Cluster workers | Shared system prompt for all cluster worker agents. |
+| `cluster/ROLE.md` | Cluster workers | Per-role prompt template (receives role-specific variables). |
 | `HEARTBEAT.md` | Heartbeat cron | Self-monitoring prompt for the agent's periodic heartbeat job. |
-| `CLUSTER_SYSTEM_PROMPT.md` | Cluster workers | Shared system prompt for all cluster worker agents. |
-| `CLUSTER_ROLE_PROMPT.md` | Cluster workers | Per-role prompt template (receives role-specific variables). |
-| `WEB_SEARCH_AVAILABLE.md` | Chat | Injected into chat context when web search tools are available. |
-| `WEB_SEARCH_UNAVAILABLE.md` | Chat | Injected into chat context when web search is disabled. |
-| `SKILL_BUILDING_GUIDE.md` | Docker agent | Guide for building and managing agent skills. |
 
 ### Scheduling & Triggers
 
@@ -36,7 +33,6 @@ Config markdown files support includes and built-in variables (processed by `ren
 | `{{ filepath.md }}` | Include another file (path relative to project root, recursive with circular detection) |
 | `{{datetime}}` | Current ISO timestamp |
 | `{{skills}}` | Dynamic bullet list of active skill descriptions from `skills/active/*/SKILL.md` frontmatter |
-| `{{web_search}}` | Injects web search availability context |
 
 ## When Changes Take Effect
 

@@ -1,136 +1,347 @@
-# CLAUDE.md
+# My Agent
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## Overview
 
-## Project Overview
+This is an autonomous AI agent powered by [thepopebot](https://github.com/stephengpope/thepopebot). It uses a **two-layer architecture**:
 
-This is an autonomous AI agent project powered by [thepopebot](https://github.com/stephengpope/thepopebot). It uses a two-layer architecture:
+1. **Event Handler** — A Next.js server that orchestrates everything: web UI, Telegram chat, cron scheduling, webhook triggers, and job creation.
+2. **Docker Agent** — A container that runs the coding agent (Pi or Claude Code, configured via `AGENT_BACKEND`) for autonomous task execution. Each job gets its own branch, container, and PR.
 
-1. **Event Handler** — A Next.js server (baked into Docker image) that orchestrates: web UI, Telegram chat, cron scheduling, webhook triggers, and job creation
-2. **Docker Agent** — A container that runs the coding agent for autonomous task execution (each job gets its own branch, container, and PR)
+All core logic lives in the `thepopebot` npm package. This project contains only configuration and data — the Next.js app, `.next` build output, and all web dependencies are baked into the Docker image.
 
-**Key insight**: All core logic lives in the `thepopebot` npm package. This project contains only configuration, data, and skills. The Next.js app and `.next` build output are baked into the Docker image — they do not exist locally.
-
-## Commands
-
-```bash
-# Development
-npm run dev              # Start Next.js dev server with turbopack
-
-# Build & Production
-npm run build            # Build Next.js app
-npm run start            # Start production server
-
-# Setup
-npm run setup            # Run thepopebot setup
-npm run setup-telegram   # Configure Telegram webhook
-npm run setup-weather    # Configure weather webhook
-npm run reset-auth       # Reset authentication
-
-# Deployment
-npx thepopebot upgrade   # Upgrade to latest thepopebot version
-```
-
-## Architecture
+## Directory Structure
 
 ```
-┌─────────────────┐      ┌──────────────┐      ┌─────────────────┐
-│  Event Handler  │ ───► │    GitHub    │ ───► │  Docker Agent   │
-│  (Next.js)      │      │ (job/* branch│      │  (runs agent)   │
-└────────▲────────┘      └──────┬───────┘      └────────┬────────┘
-         │                      │                       │
-         │                      │◄──────────────────────┘
-         │                      │   (PR created)
-         └──────────────────────┘
+project-root/
+├── CLAUDE.md                          # This file (project documentation)
+├── README.md                          # User-facing orientation doc
+├── .env                               # API keys and tokens (gitignored)
+├── package.json
+│
+├── config/                            # Agent configuration (user-editable)
+│   ├── agent-chat/
+│   │   └── SYSTEM.md                  # Agent chat system prompt
+│   ├── code-chat/
+│   │   └── SYSTEM.md                  # Code workspace planning prompt
+│   ├── agent-job/
+│   │   ├── SOUL.md                    # Personality, identity, and values
+│   │   ├── AGENT_JOB.md               # Agent runtime environment docs
+│   │   └── SUMMARY.md                 # Prompt for summarizing completed jobs
+│   ├── cluster/
+│   │   ├── SYSTEM.md                  # Cluster system prompt
+│   │   └── ROLE.md                    # Cluster role prompt
+│   ├── HEARTBEAT.md                   # Self-monitoring / heartbeat behavior
+│   ├── CRONS.json                     # Scheduled job definitions
+│   └── TRIGGERS.json                  # Webhook trigger definitions
+│
+├── .github/workflows/                 # GitHub Actions
+├── docker-compose.yml                 # Docker Compose config (MANAGED)
+├── docker-compose.custom.yml          # User-owned compose overrides (not managed)
+├── traefik-dynamic.yml.example        # Traefik TLS config template (not managed)
+├── skills/                            # All available agent skills
+│   └── active/                        # Symlinks to active skills (shared by Pi + Claude Code)
+├── .pi/skills → skills/active         # Pi reads skills from here
+├── .claude/skills → skills/active     # Claude Code reads skills from here
+├── cron/                              # Scripts for command-type cron actions
+├── triggers/                          # Scripts for command-type trigger actions
+├── logs/                              # Per-job output (logs/<JOB_ID>/job.md + session .jsonl)
+├── data/                              # SQLite database (data/thepopebot.sqlite)
+│   └── clusters/                      # Cluster workspace data (shared dirs, role dirs, logs)
+└── docs/                              # User documentation (see docs/ for guides)
 ```
 
-### Job Lifecycle
-1. Job created via chat, cron, trigger, or API
-2. `job/<uuid>` branch created with `logs/<uuid>/job.md` containing the task
-3. `run-job.yml` workflow triggers on branch creation
-4. Docker agent clones branch, runs the agent, logs to `logs/<uuid>/`
-5. Agent commits results and opens a PR
-6. `auto-merge.yml` squash-merges if changes within `ALLOWED_PATHS`
-7. Notification sent back to event handler
+## Two-Layer Architecture
 
-## Key Directories
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                                                                         │
+│  ┌──────────────────┐                                                 │
+│  │  Event Handler   │ ──1──►  Creates agent-job/* branch              │
+│  │  (creates job)   │ ──2──►  Launches Docker agent container         │
+│  └────────▲─────────┘                                                 │
+│           │                   ┌──────────────────┐                     │
+│           │                   │  Docker Agent    │                     │
+│           │                   │  (runs agent,    │                     │
+│           │                   │   creates PR)    │                     │
+│           │                   └────────┬─────────┘                     │
+│           │                            │                               │
+│           │                            3 (creates PR)                  │
+│           │                            │                               │
+│           │                            ▼                               │
+│           │                   ┌──────────────────┐                     │
+│           │                   │     GitHub       │                     │
+│           │                   │   (PR opened)    │                     │
+│           │                   └────────┬─────────┘                     │
+│           │                            │                               │
+│           │                            4a (auto-merge.yml)             │
+│           │                            4b (notify-pr-complete.yml)     │
+│           │                            │                               │
+│           5 (notification → web UI     │                               │
+│              and Telegram)             │                               │
+│           └────────────────────────────┘                               │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
 
-| Path | Purpose |
-|------|---------|
-| `config/` | User-editable agent configuration (prompts, crons, triggers) |
-| `skills/` | Available skills; activate by symlinking to `skills/active/` |
-| `cron/` | Shell scripts for command-type cron actions |
-| `triggers/` | Scripts for command-type trigger actions |
-| `logs/` | Per-job output (`logs/<JOB_ID>/job.md` + session `.jsonl`) |
-| `data/` | SQLite database (`thepopebot.sqlite`) and cluster data |
+**Event Handler** (this Next.js server): Receives requests (web UI, Telegram, webhooks, cron timers), creates jobs by launching Docker agent containers locally, and manages the web interface.
 
-## Configuration Files
+**Docker Agent**: A container launched locally by the event handler that clones the job branch, runs the coding agent with the job prompt, commits results, and opens a PR. Supports multiple agent backends: Claude Code, Pi, Gemini CLI, Codex CLI, and OpenCode — configured via the Coding Agents admin page.
 
-| File | Purpose |
-|------|---------|
-| `config/SOUL.md` | Agent personality and values |
-| `config/CRONS.json` | Scheduled job definitions |
-| `config/TRIGGERS.json` | Webhook trigger definitions |
-| `config/JOB_PLANNING.md` | Event handler LLM system prompt |
-| `config/JOB_AGENT.md` | Docker agent runtime docs |
+## Job Lifecycle
 
-Config markdown files support template variables:
-- `{{ filepath.md }}` — Include another file
-- `{{datetime}}` — Current ISO timestamp
-- `{{skills}}` — Dynamic list of active skills
+1. **Job created** — Event handler calls `createJob()` (via chat, cron, trigger, or API)
+2. **Branch pushed** — An `agent-job/*` branch is created with `logs/<uuid>/job.md` containing the task prompt
+3. **Container launched** — Event handler launches a Docker agent container locally via the Docker API
+4. **Agent runs** — Docker agent clones the branch, builds the system prompt from config files, runs the agent with the job prompt, and logs the session to `logs/<uuid>/`
+5. **PR created** — Agent commits results and opens a pull request
+6. **Auto-merge** — `auto-merge.yml` squash-merges the PR if all changed files fall within `ALLOWED_PATHS` prefixes (default: `/logs`)
+7. **Notification** — `notify-pr-complete.yml` sends job results back to the event handler, which creates a notification in the web UI and sends a Telegram message
+
+## Code Workspaces
+
+Interactive and headless browser-based coding sessions that run inside Docker containers. Launch from chat to get a full terminal environment with your configured coding agent and repo.
+
+- **Multi-agent support** — Choose from Claude Code, Pi, Gemini CLI, Codex CLI, or OpenCode as the workspace agent backend
+- **Interactive mode** — Browser-based terminal at `/code/{id}` with shell tabs and toolbar actions (commit, merge, reconnect)
+- **Headless mode** — Autonomous task execution: agent runs in prompt mode, commits changes, and creates a PR
+- **Persistence** — Workspace data in Docker volumes; stopped containers are auto-recovered
+- **Linked to chat** — Workspace context flows from chat; session summaries flow back on close
+- **Container monitoring** — Live Docker container stats via the Containers admin page
+
+Configuration: requires Docker socket access, `GH_TOKEN`, and agent-specific credentials (OAuth tokens or API keys) configured via `/admin/event-handler/coding-agents`.
+
+## Cluster Workspaces
+
+Multi-role agent teams that collaborate via shared directories. Create and manage at `/clusters`.
+
+- **Roles** — Each role has its own prompt, trigger config, max concurrency, and working directory
+- **Shared directories** — Named folders under `shared/` accessible to all roles
+- **Triggers** — Manual (click), webhook (POST with payload), cron (scheduled), file watch (react to changes)
+- **Concurrency** — Per-role container limits; triggers are rejected when at capacity
+- **Console** — Live container status, resource usage, streaming logs at `/clusters`
+- **Prompts** — Customizable via `config/cluster/SYSTEM.md` (shared) and `config/cluster/ROLE.md` (per-role template)
+- **Data** — Stored under `data/clusters/cluster-{id}/`
 
 ## Action Types
 
-| Type | LLM? | Use Case |
-|------|------|----------|
-| `agent` | Yes | Tasks that need to think, reason, write code |
-| `command` | No | Shell scripts, file operations |
-| `webhook` | No | Call external APIs, forward webhooks |
+Both cron jobs and webhook triggers use the same dispatch system. Every action has a `type` field:
 
-## Managed Files (Do Not Edit)
+| | `agent` (default) | `command` | `webhook` |
+|---|---|---|---|
+| **Uses LLM** | Yes — spins up Docker agent | No | No |
+| **Runtime** | Minutes to hours | Milliseconds to seconds | Milliseconds to seconds |
+| **Cost** | LLM API calls + GitHub Actions | Free (runs on event handler) | Free (runs on event handler) |
+| **Use case** | Tasks that need to think, reason, write code | Shell scripts, file operations | Call external APIs, forward webhooks |
 
-These are auto-synced by `thepopebot init` and `thepopebot upgrade`:
-- `.github/workflows/`
-- `docker-compose.yml`
-- `.dockerignore`
-- `.gitignore`
-- `CLAUDE.md` (this file)
+If the task needs to *think*, use `agent`. If it just needs to *do*, use `command`. If it needs to *call an external service*, use `webhook`.
 
-For Docker Compose customization, use `docker-compose.custom.yml` and set `COMPOSE_FILE=docker-compose.custom.yml` in `.env`.
+### Agent action
+```json
+{ "type": "agent", "job": "Analyze the logs and write a summary report" }
+```
+Creates a Docker Agent job. The `job` string is passed as-is to the LLM as its task prompt.
 
-## Skills
+### Command action
+```json
+{ "type": "command", "command": "node cleanup.js --older-than 7d" }
+```
+Runs a shell command on the event handler. Working directory: `cron/` for crons, `triggers/` for triggers.
 
-Skills in `skills/` are activated by symlinking into `skills/active/`. Both `.pi/skills` and `.claude/skills` point to `skills/active/`.
+### Webhook action
+```json
+{
+  "type": "webhook",
+  "url": "https://api.example.com/notify",
+  "method": "POST",
+  "headers": { "Authorization": "Bearer token" },
+  "vars": { "source": "my-agent" }
+}
+```
+Makes an HTTP request. `GET` skips the body. `POST` (default) sends `{ ...vars }` or `{ ...vars, data: <incoming payload> }` when triggered by a webhook.
 
-To create a skill:
-1. Create directory in `skills/` with a `SKILL.md` (frontmatter: name, description, userInvokeable)
-2. Add executable scripts or JS files
-3. Symlink: `ln -s ../your-skill skills/active/your-skill`
+## Cron Jobs
 
-## Database
+Defined in `config/CRONS.json`, loaded at server startup by `node-cron`.
 
-SQLite via Drizzle ORM at `data/thepopebot.sqlite`. Auto-initialized and migrated on startup. Tables: `users`, `chats`, `messages`, `notifications`, `subscriptions`, `settings`.
+```json
+[
+  {
+    "name": "Daily Check",
+    "schedule": "0 9 * * *",
+    "type": "agent",
+    "job": "Review recent activity and summarize findings",
+    "enabled": true
+  }
+]
+```
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | Yes | Display name |
+| `schedule` | Yes | Cron expression (e.g., `0 9 * * *` = daily at 9am) |
+| `type` | No | `agent` (default), `command`, or `webhook` |
+| `job` | For agent | Task prompt passed to the LLM |
+| `command` | For command | Shell command (runs in `cron/` directory) |
+| `url` | For webhook | Target URL |
+| `method` | For webhook | `GET` or `POST` (default: `POST`) |
+| `headers` | For webhook | Custom request headers |
+| `vars` | For webhook | Key-value pairs merged into request body |
+| `enabled` | No | Set `false` to disable (default: `true`) |
+| `llm_provider` | No | Override LLM provider for this cron (agent type only) |
+| `llm_model` | No | Override LLM model for this cron (agent type only) |
+
+## Webhook Triggers
+
+Defined in `config/TRIGGERS.json`, loaded at server startup. Triggers fire on POST requests to watched paths (after auth, before route handler, fire-and-forget).
+
+```json
+[
+  {
+    "name": "GitHub Push",
+    "watch_path": "/webhook/github-push",
+    "enabled": true,
+    "actions": [
+      {
+        "type": "agent",
+        "job": "Review the push to {{body.ref}}: {{body.head_commit.message}}"
+      }
+    ]
+  }
+]
+```
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | Yes | Display name |
+| `watch_path` | Yes | URL path to watch (e.g., `/webhook/github-push`) |
+| `actions` | Yes | Array of actions to fire (same fields as cron actions) |
+| `enabled` | No | Set `false` to disable (default: `true`) |
+
+**Template tokens** for `job` and `command` strings:
+
+| Token | Resolves to |
+|-------|-------------|
+| `{{body}}` | Entire request body as JSON |
+| `{{body.field}}` | Nested field from request body |
+| `{{query}}` | All query parameters as JSON |
+| `{{query.field}}` | Specific query parameter |
+| `{{headers}}` | All request headers as JSON |
+| `{{headers.field}}` | Specific request header |
+
+## API Endpoints
+
+All API routes are under `/api/`, handled by the catch-all route.
+
+| Endpoint | Method | Auth | Purpose |
+|----------|--------|------|---------|
+| `/api/create-job` | POST | `x-api-key` | Create a new autonomous agent job |
+| `/api/telegram/webhook` | POST | `TELEGRAM_WEBHOOK_SECRET` | Telegram bot webhook |
+| `/api/telegram/register` | POST | `x-api-key` | Register Telegram webhook URL |
+| `/api/github/webhook` | POST | `GH_WEBHOOK_SECRET` | Receive notifications from GitHub Actions |
+| `/api/jobs/status` | GET | `x-api-key` | Check status of running/queued jobs |
+| `/api/cluster/{clusterId}/role/{roleId}/webhook` | POST | `x-api-key` | Trigger a cluster role execution |
+| `/api/ping` | GET | Public | Health check |
+
+**`x-api-key`**: Database-backed API keys generated through the web UI (Settings > Secrets). Keys are SHA-256 hashed, verified with timing-safe comparison. Format: `tpb_` prefix + 64 hex characters.
+
+## Web Interface
+
+Accessible after login at `APP_URL`. Routes: `/` (chat), `/chats` (history), `/chat/[chatId]` (resume chat), `/code/{id}` (code workspace terminal), `/clusters` (cluster workspaces), `/admin` (admin panel), `/profile` (self-service email/password), `/runners` (job monitor), `/notifications`, `/login` (auth / first-time admin setup).
+
+Admin panel sections: `/admin/event-handler/` (LLMs, Chat, Coding Agents, Jobs, Telegram, Voice, Webhooks), `/admin/api-keys`, `/admin/github`, `/admin/users`, `/admin/crons`, `/admin/triggers`, `/admin/general`.
 
 ## Authentication
 
-NextAuth v5 with Credentials provider. First visit creates admin account. API routes use `x-api-key` header (keys generated via web UI).
+NextAuth v5 with Credentials provider (email/password), JWT in httpOnly cookies. First visit creates admin account. Browser UI uses fetch route handlers with `auth()` session check. API routes use `x-api-key` header. SSE streaming endpoints (`/stream/chat`, `/stream/containers`, `/stream/cluster/*/logs`) also use `auth()` session check.
 
-## GitHub Secrets
+## Database
 
-| Prefix | Visible to LLM? |
-|--------|-----------------|
-| `AGENT_` | No (filtered) |
-| `AGENT_LLM_` | Yes |
+SQLite via Drizzle ORM at `data/thepopebot.sqlite`. Auto-initialized and auto-migrated on server startup. Tables: `users`, `chats`, `messages`, `notifications`, `subscriptions`, `settings` (key-value store, also stores API keys). Column naming: camelCase in JS → snake_case in SQL.
+
+## GitHub Actions Workflows
+
+| Workflow | Trigger | Purpose |
+|----------|---------|---------|
+| `rebuild-event-handler.yml` | Push to `main` | Rebuilds server (fast path or Docker restart) |
+| `upgrade-event-handler.yml` | Manual `workflow_dispatch` | Creates PR to upgrade thepopebot package |
+| `auto-merge.yml` | Job PR opened | Squash-merges if changes are within `ALLOWED_PATHS` |
+| `notify-pr-complete.yml` | After `auto-merge.yml` | Sends job completion notification |
+
+## GitHub Secrets & Variables
+
+### Secrets (prefix-based naming)
+
+| Prefix | Purpose | Visible to LLM? | Example |
+|--------|---------|------------------|---------|
+| `AGENT_` | Protected credentials for Docker agent | No (filtered by env-sanitizer) | `AGENT_GH_TOKEN`, `AGENT_ANTHROPIC_API_KEY` |
+| `AGENT_LLM_` | LLM-accessible credentials for Docker agent | Yes | `AGENT_LLM_BRAVE_API_KEY` |
+| *(none)* | Workflow-only secrets (never passed to container) | N/A | `GH_WEBHOOK_SECRET` |
+
+`AGENT_*` secrets are passed directly to Docker agent containers by the event handler via `buildAgentAuthEnv()` (prefix stripped). `AGENT_LLM_*` secrets are not filtered from the LLM's bash environment.
+
+### Repository Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `APP_URL` | Public URL for the event handler | Required |
+| `AUTO_MERGE` | Set to `"false"` to disable auto-merge | Enabled |
+| `ALLOWED_PATHS` | Comma-separated path prefixes for auto-merge | `/logs` |
+| `JOB_IMAGE_URL` | Docker image for job agent (GHCR URLs trigger auto-builds) | Default thepopebot image |
+| `EVENT_HANDLER_IMAGE_URL` | Docker image for event handler | Default thepopebot image |
+| `RUNS_ON` | GitHub Actions runner label | `ubuntu-latest` |
+| `LLM_PROVIDER` | LLM provider for Docker agent | `anthropic` |
+| `LLM_MODEL` | LLM model name for Docker agent | Provider default |
+| `AGENT_BACKEND` | Agent runner: `pi` (API credits) or `claude-code` (subscription) | `claude-code` |
 
 ## Environment Variables
 
-Required: `APP_URL`, `AUTH_SECRET`, `GH_TOKEN`, `GH_OWNER`, `GH_REPO`
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `APP_URL` | Public URL for webhooks and Telegram | Yes |
+| `AUTH_SECRET` | NextAuth session encryption (auto-generated) | Yes |
+| `GH_TOKEN` | GitHub PAT for creating branches/files | Yes |
+| `GH_OWNER` | GitHub repository owner | Yes |
+| `GH_REPO` | GitHub repository name | Yes |
+| `TELEGRAM_BOT_TOKEN` | Telegram bot token | For Telegram |
+| `TELEGRAM_WEBHOOK_SECRET` | Telegram webhook validation secret | No |
+| `TELEGRAM_CHAT_ID` | Default chat ID for notifications | For Telegram |
+| `GH_WEBHOOK_SECRET` | GitHub Actions webhook auth | For notifications |
+| `LLM_PROVIDER` | `anthropic`, `openai`, `google`, or `custom` | No (default: `anthropic`) |
+| `LLM_MODEL` | Model name override | No |
+| `LLM_MAX_TOKENS` | Max tokens for LLM responses | No (default: 4096) |
+| `ANTHROPIC_API_KEY` | Anthropic API key | For anthropic provider |
+| `OPENAI_API_KEY` | OpenAI API key / Whisper | For openai provider |
+| `CUSTOM_OPENAI_BASE_URL` | Custom OpenAI-compatible base URL | For custom provider |
+| `GOOGLE_API_KEY` | Google API key | For google provider |
+| `CUSTOM_API_KEY` | Custom provider API key | For custom provider |
+| `AGENT_BACKEND` | Agent runner: `claude-code`, `pi`, `gemini-cli`, `codex-cli`, or `opencode` | No (default: `claude-code`) |
+| `DATABASE_PATH` | Override SQLite DB location | No |
+| `COMPOSE_FILE` | Override which docker-compose file to use (e.g. `docker-compose.custom.yml`) | No |
 
-Optional: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `LLM_PROVIDER`, `LLM_MODEL`, `WEB_SEARCH`, `AGENT_BACKEND`
+## Managed Files
 
-## Important Constraints
+The following paths are auto-synced by `thepopebot init` and `thepopebot upgrade`. **Do not edit them** — changes will be overwritten on package updates: `.github/workflows/`, `docker-compose.yml`, `.dockerignore`, `.gitignore`, `CLAUDE.md`.
 
-- The Next.js app code doesn't exist locally — it's in the npm package
-- When running locally with `npm run dev`, you're running the Next.js app from the package
-- Changes to managed files will be overwritten on upgrade
-- For production, use Docker Compose (the Next.js app runs inside the container)
+To customize Docker Compose config without losing changes on upgrade, set `COMPOSE_FILE=docker-compose.custom.yml` in `.env`. The custom file is scaffolded by init but never overwritten.
+
+The Next.js app and `.next` build output are baked into the Docker image — they do not exist in user projects.
+
+## Customization
+
+User-editable config files in `config/`: `agent-chat/SYSTEM.md` (agent chat system prompt), `code-chat/SYSTEM.md` (code workspace planning), `agent-job/SOUL.md` (personality), `agent-job/AGENT_JOB.md` (runtime docs), `agent-job/SUMMARY.md` (job summaries), `cluster/SYSTEM.md` (cluster system prompt), `cluster/ROLE.md` (cluster role prompt), `HEARTBEAT.md` (self-monitoring), `CRONS.json` (scheduled jobs), `TRIGGERS.json` (webhook triggers).
+
+To customize Docker Compose (TLS, ports, volumes, extra services), edit `docker-compose.custom.yml` and set `COMPOSE_FILE=docker-compose.custom.yml` in `.env`. For Tailscale TLS, copy `traefik-dynamic.yml.example` to `traefik-dynamic.yml` and follow the instructions inside.
+
+Skills in `skills/` are activated by symlinking into `skills/active/`. Both `.pi/skills` and `.claude/skills` point to `skills/active/`. Scripts for command-type actions go in `cron/` and `triggers/`.
+
+For detailed user guides, see the `docs/` directory.
+
+### Markdown includes and variables
+
+Config markdown files support includes and built-in variables (processed by the package's `render-md.js`):
+
+| Syntax | Description |
+|--------|-------------|
+| `{{ filepath.md }}` | Include another file (relative to project root, recursive with circular detection) |
+| `{{datetime}}` | Current ISO timestamp |
+| `{{skills}}` | Dynamic bullet list of active skill descriptions from `skills/active/*/SKILL.md` frontmatter — never hardcode skill names, this is resolved at runtime |
