@@ -1,6 +1,6 @@
 import './globals.css';
 import '../theme.css';
-import { ThemeProvider, FeaturesProvider } from 'thepopebot/chat';
+import { ThemeProvider } from 'thepopebot/chat';
 
 export const metadata = {
   title: 'ThePopeBot',
@@ -23,11 +23,9 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen bg-background text-foreground antialiased">
-        <FeaturesProvider features={features}>
           <ThemeProvider>
             {children}
           </ThemeProvider>
-        </FeaturesProvider>
       </body>
     </html>
   );
