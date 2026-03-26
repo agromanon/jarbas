@@ -1,7 +1,5 @@
-import { auth } from 'thepopebot/auth';
-import { SettingsLayout } from 'thepopebot/chat';
+import { redirect } from 'next/navigation';
 
-export default async function AdminRoute() {
-  const session = await auth();
-  return <SettingsLayout session={session} />;
+export default function AdminRoot() {
+  redirect('/admin/general');
 }
