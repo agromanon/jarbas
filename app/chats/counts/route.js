@@ -1,1 +1,1 @@
-export { getChatsCountsHandler as GET } from 'thepopebot/chat/api';
+export { getSidebarCounts as GET } from 'thepopebot/chat/api';
